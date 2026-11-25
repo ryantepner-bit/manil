@@ -1,0 +1,39 @@
+name: Build MANDELBROT (Windows)
+
+on:
+  push:
+    paths:
+      - 'Source/**'
+      - 'Tests/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure (Visual Studio 2022, x64)
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+
+      - name: Build (Release)
+        run: cmake --build build --config Release --target Mandelbrot MandelbrotTests --parallel
+
+      - name: Run tests
+        continue-on-error: true
+        run: build\MandelbrotTests_artefacts\Release\MandelbrotTests.exe
+        shell: cmd
+
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item build\Mandelbrot_artefacts\Release\MANDELBROT.exe dist\
+
+      - name: Upload MANDELBROT.exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: MANDELBROT-windows-x64
+          path: dist/
