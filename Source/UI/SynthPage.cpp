@@ -88,8 +88,8 @@ SynthPage::SynthPage (AppState& s, Composer& c) : state (s), composer (c), wtDis
     {
         if (! track.isValid()) return;
         state.beginEdit ("Init patch");
-        auto sn = track.getChildWithName (IDs::SYNTH);
-        for (auto& p : defs()) sn.setProperty (p.id, p.defV, &state.undo);
+        Model::applySynthPreset (track.getChildWithName (IDs::SYNTH), "Init", &state.undo);
+        updateVisibility();
     };
     randomize.onClick = [this]
     {
@@ -107,6 +107,16 @@ SynthPage::SynthPage (AppState& s, Composer& c) : state (s), composer (c), wtDis
         }
     };
     for (auto* b : { &wtFromFractal, &wtLoad, &grainLoad, &grainClear, &init, &randomize }) addAndMakeVisible (b);
+    presetBox.setTextWhenNothingSelected ("Load preset...");
+    presetBox.addItemList (Model::synthPresetNames(), 1);
+    presetBox.onChange = [this]
+    {
+        if (! track.isValid() || presetBox.getSelectedItemIndex() < 0) return;
+        state.beginEdit ("Load preset");
+        Model::applySynthPreset (track.getChildWithName (IDs::SYNTH), presetBox.getText(), &state.undo);
+        updateVisibility();
+    };
+    addAndMakeVisible (presetBox);
     addAndMakeVisible (wtDisplay);
     keyboard.setAvailableRange (24, 108);
     keyboard.setLowestVisibleKey (36);
@@ -163,6 +173,8 @@ void SynthPage::bindTrack (juce::ValueTree t)
     keyState.allNotesOff (1);
     const bool ok = track.isValid();
     if (ok) trackBox.setSelectedId ((int) track[IDs::id] + 1, juce::dontSendNotification);
+    const auto preset = track.getChildWithName (IDs::SYNTH).getProperty ("preset", "").toString();
+    if (preset.isNotEmpty()) presetBox.setText (preset, juce::dontSendNotification); else presetBox.setSelectedId (0, juce::dontSendNotification);
     title.setText (ok ? "SYNTH  /  " + track[IDs::name].toString() : "No synth track - add one in the Arrangement", juce::dontSendNotification);
     wtDisplay.trackId = ok ? (int) track[IDs::id] : -1;
     auto sn = track.getChildWithName (IDs::SYNTH);
@@ -173,6 +185,7 @@ void SynthPage::bindTrack (juce::ValueTree t)
         if (auto* c = dynamic_cast<ParamChoice*> (comp (i))) { if (ok) c->bind (sn, d.id, &state.undo); else c->unbind(); }
     }
     for (auto* b : { &wtFromFractal, &wtLoad, &grainLoad, &grainClear, &init, &randomize }) b->setEnabled (ok);
+    presetBox.setEnabled (ok);
     updateVisibility();
 }
 
@@ -211,7 +224,8 @@ void SynthPage::resized()
     title.setBounds (top.removeFromLeft (360));
     trackBox.setBounds (top.removeFromLeft (200)); top.removeFromLeft (8);
     init.setBounds (top.removeFromLeft (90)); top.removeFromLeft (4);
-    randomize.setBounds (top.removeFromLeft (110));
+    randomize.setBounds (top.removeFromLeft (110)); top.removeFromLeft (8);
+    presetBox.setBounds (top.removeFromLeft (170));
     r.removeFromTop (6);
     keyboard.setBounds (r.removeFromBottom (70));
     r.removeFromBottom (6);
