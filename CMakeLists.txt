@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(MANDELBROT VERSION 0.2.0 LANGUAGES C CXX)
+project(MANDELBROT VERSION 0.3.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -42,6 +42,10 @@ set(MANDEL_CORE_SOURCES
     Source/Audio/Synth.cpp
     Source/Audio/DrumMachine.h
     Source/Audio/DrumMachine.cpp
+    Source/Audio/BreakEngine.h
+    Source/Audio/BreakEngine.cpp
+    Source/Audio/SampleLibrary.h
+    Source/Audio/SampleLibrary.cpp
     Source/Audio/AudioPool.h
     Source/Audio/AudioPool.cpp
     Source/Audio/Snapshot.h
@@ -85,6 +89,8 @@ set(MANDEL_UI_SOURCES
     Source/UI/AudioEditorPage.cpp
     Source/UI/LivePage.h
     Source/UI/LivePage.cpp
+    Source/UI/BreakPage.h
+    Source/UI/BreakPage.cpp
 )
 
 set(MANDEL_JUCE_MODULES

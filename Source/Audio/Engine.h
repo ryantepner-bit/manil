@@ -6,6 +6,8 @@
 #include "Snapshot.h"
 #include "Synth.h"
 #include "DrumMachine.h"
+#include "BreakEngine.h"
+#include "SampleLibrary.h"
 #include "Effects.h"
 #include "../Live/LiveSequencer.h"
 
@@ -37,6 +39,7 @@ public:
     InsertChain inserts;
     std::unique_ptr<SynthEngine> synth;
     std::unique_ptr<DrumEngine> drums;
+    std::unique_ptr<BreakEngine> breaks;
     std::atomic<bool> armed { false };
     std::atomic<int> livePart { 0 };       // Live::Part played by this track (0 = none)
     juce::AudioBuffer<float> buf;
@@ -166,6 +169,11 @@ private:
 
     void prepareAll (double sr);
     void applyPadProperty (TrackProcessor& tp, const juce::ValueTree& pad, const juce::Identifier& prop);
+    void applyBreakNode (TrackProcessor& tp, const juce::ValueTree& breakNode, const juce::Identifier& prop);
+public:
+    /** The built-in break (shared, created on first use, message thread). */
+    static std::shared_ptr<const SampleData> defaultBreak();
+private:
     void startRecordingWriter();
     void finishRecording();
 
