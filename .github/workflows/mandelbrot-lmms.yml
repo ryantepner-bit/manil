@@ -1,0 +1,37 @@
+name: MANDELBROT (LMMS based)
+# All build logic lives in ci/*.sh so this file never needs editing.
+on:
+  push:
+    branches: [main]
+    paths: ['lmms/**', 'ci/**', '.github/workflows/mandelbrot-lmms.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: mandelbrot-lmms
+  cancel-in-progress: true
+jobs:
+  linux-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: manil }
+      - uses: actions/cache@v4
+        with: { key: 'ccache-linux-${{ github.run_id }}', restore-keys: ccache-linux-, path: ~/.cache/ccache }
+      - run: bash manil/ci/linux-job.sh
+      - if: always()
+        run: bash manil/ci/publish-logs.sh ci-logs-linux "${{ github.token }}" "${{ github.repository }}"
+  windows:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: manil }
+      - uses: actions/cache@v4
+        with: { key: 'vcpkg-mingw64-${{ github.run_id }}', restore-keys: vcpkg-mingw64-, path: build/vcpkg_installed }
+      - uses: actions/cache@v4
+        with: { key: 'ccache-mingw64-${{ github.run_id }}', restore-keys: ccache-mingw64-, path: ~/.cache/ccache }
+      - run: bash manil/ci/windows-job.sh
+      - uses: actions/upload-artifact@v4
+        with: { name: MANDELBROT-windows-x64, path: dist/ }
+      - if: always()
+        run: bash manil/ci/publish-logs.sh ci-logs-windows "${{ github.token }}" "${{ github.repository }}"
