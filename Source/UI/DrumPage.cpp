@@ -281,7 +281,7 @@ DrumPage::DrumPage (AppState& s, Composer& c) : state (s), composer (c), grid (s
         if (! track.isValid()) return;
         state.beginEdit ("New pattern");
         const double bpb = state.beatsPerBar();
-        const double at = std::floor (state.engine.getPosition() / bpb) * bpb;
+        const double at = Model::freeSpot (track, std::floor (state.engine.getPosition() / bpb) * bpb, bpb * 2, bpb);
         state.selectClip (Model::addPatternClip (track, at, bpb * 2, &state.undo));
     };
     genBreak.setColour (juce::TextButton::buttonColourId, Theme::accent.withAlpha (0.3f));
@@ -504,7 +504,9 @@ void DrumPage::generateBreak (bool mutate)
     s.beatsPerBar = juce::jmax (1, (int) std::round (state.beatsPerBar()));
     s.density = (float) genDensity.getValue();
     s.complexity = (float) genComplexity.getValue();
-    s.seed = (juce::int64) clip[IDs::id] * 7919;
+    // a fresh break on every press; Mutate varies the current one
+    if (! mutate) ++breakPress;
+    s.seed = (juce::int64) clip[IDs::id] * 7919 + breakPress * 104729;
     breakGeneration = mutate ? breakGeneration + 1 : 0;
     auto f = state.features;
     if (mutate)
