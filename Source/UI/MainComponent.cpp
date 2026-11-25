@@ -4,7 +4,7 @@
 MainComponent::MainComponent (Engine& e, juce::ApplicationProperties& p)
     : engine (e), props (p), state (e), composer (state), transport (state),
       livePage (state, composer), arrangement (state, composer), pianoRoll (state), generators (state, composer),
-      synth (state, composer), drums (state, composer), mixer (state), audioEditor (state)
+      synth (state, composer), drums (state, composer), breaks (state, composer), mixer (state), audioEditor (state)
 {
     juce::LookAndFeel::setDefaultLookAndFeel (&lnf);
     setLookAndFeel (&lnf);
@@ -20,6 +20,7 @@ MainComponent::MainComponent (Engine& e, juce::ApplicationProperties& p)
     tabs.addTab ("Generative", bg, &generators, false);
     tabs.addTab ("Synthesizer", bg, &synth, false);
     tabs.addTab ("Drum Machine", bg, &drums, false);
+    tabs.addTab ("Breaks", bg, &breaks, false);
     tabs.addTab ("Mixer", bg, &mixer, false);
     tabs.addTab ("Audio Editor", bg, &audioEditor, false);
     addAndMakeVisible (tabs);
@@ -90,6 +91,7 @@ void MainComponent::setProject (juce::ValueTree p)
     generators.setProject (p);
     synth.setProject (p);
     drums.setProject (p);
+    breaks.setProject (p);
     mixer.setProject (p);
     audioEditor.setProject (p);
     engine.recordingFolder = state.audioFolder().getChildFile ("Recordings");
@@ -109,7 +111,7 @@ void MainComponent::buildDemoContent()
     for (auto t : Model::tracks (p))
     {
         const auto type = t[IDs::type].toString();
-        if (type == "audio") continue;
+        if (type == "audio" || type == "break") continue;
         auto g = composer.addGenerator (t[IDs::id], type == "drums" ? Gen::Breaks : roles[si++ % 4]);
         g.setProperty (IDs::seed, 1000 + si * 17, nullptr);
     }
@@ -351,7 +353,7 @@ void MainComponent::getCommandInfo (juce::CommandID id, juce::ApplicationCommand
         case cmdGenerateAll: info.setInfo ("Generate all at playhead", {}, "Generate", 0); info.addDefaultKeypress ('g', cmd); break;
         case cmdShortcuts: info.setInfo ("Keyboard shortcuts", {}, "Help", 0); break;
         default:
-            if (id >= cmdWorkspace1 && id <= cmdWorkspace8)
+            if (id >= cmdWorkspace1 && id <= cmdWorkspace9)
             {
                 const int i = id - cmdWorkspace1;
                 info.setInfo (tabs.getTabNames()[i], {}, "View", 0);
@@ -408,7 +410,7 @@ bool MainComponent::perform (const InvocationInfo& info)
             juce::AlertWindow::showAsync (juce::MessageBoxOptions().withTitle ("Shortcuts").withButton ("OK", 1).withMessage (
                 "Space  play / stop (returns to where you started)      L  PAT / SONG mode      Home  start\n"
                 "Ctrl+Z / Ctrl+Y  undo / redo      Ctrl+S  save      Ctrl+R  export audio\n"
-                "F1..F8  workspaces      Ctrl+G  generate all at playhead\n\n"
+                "F1..F9  workspaces      Ctrl+G  generate all at playhead\n\n"
                 "Live: click the fractal to move the probe, wheel zoom, drag pan, Capture keeps the last bars\n"
                 "Arrangement: drag clips (Ctrl-drag copies), drag right edge to resize, double-click empty to create,\n"
                 "  Ctrl+D duplicate, Ctrl+E split, Delete, drag on ruler = loop selection (click ruler clears), Ctrl+wheel zoom\n"
@@ -417,7 +419,7 @@ bool MainComponent::perform (const InvocationInfo& info)
                 "Fractal: Shift-drag = analyse region, Ctrl+Shift-drag = zoom to region"), nullptr);
             break;
         default:
-            if (info.commandID >= cmdWorkspace1 && info.commandID <= cmdWorkspace8) tabs.setCurrentTabIndex (info.commandID - cmdWorkspace1);
+            if (info.commandID >= cmdWorkspace1 && info.commandID <= cmdWorkspace9) tabs.setCurrentTabIndex (info.commandID - cmdWorkspace1);
             else return false;
     }
     return true;
@@ -436,7 +438,7 @@ juce::PopupMenu MainComponent::getMenuForIndex (int index, const juce::String&)
         case 2: add (cmdPlay); add (cmdStop); add (cmdHome); add (cmdRecord); add (cmdLoop); break;
         case 3: add (cmdAddSynth); add (cmdAddDrums); add (cmdAddAudio); m.addSeparator(); add (cmdImportAudio); break;
         case 4: add (cmdGenerateAll); add (cmdAutoGenerators); break;
-        case 5: for (int c = cmdWorkspace1; c <= cmdWorkspace8; ++c) add (c); break;
+        case 5: for (int c = cmdWorkspace1; c <= cmdWorkspace9; ++c) add (c); break;
         case 6: add (cmdShortcuts); break;
         default: break;
     }
