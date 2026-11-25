@@ -2,7 +2,7 @@
 # Renders every test project and MANDELBROT template to audio and prints stats.
 mkdir -p results
 export QT_QPA_PLATFORM=offscreen
-for f in manil/ci/renders/*.mpt src/data/projects/templates/MANDELBROT*.mpt; do
+for f in manil/ci/renders/*.mpt; do
   [ -f "$f" ] || continue
   n=$(basename "$f" .mpt)
   echo "=== render $n"

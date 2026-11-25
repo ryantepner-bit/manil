@@ -1,0 +1,380 @@
+diff --git a/include/Instrument.h b/include/Instrument.h
+index 41f2919..0324feb 100644
+--- a/include/Instrument.h
++++ b/include/Instrument.h
+@@ -37,6 +37,7 @@
+ 
+ #include <cmath>
+ #include <optional>
++#include <vector>
+ #include <string_view>
+ 
+ namespace lmms
+@@ -104,6 +105,11 @@ public:
+ 		return nullptr;
+ 	}
+ 
++	//! MANDELBROT: for instruments that slice a sample (SlicerT): the slice points (0..1 of the
++	//! sample, the last one is the end) and the sample's length in beats. Empty when not slicing.
++	virtual std::vector<float> fractalSlicePoints() const { return {}; }
++	virtual float fractalSliceBeats() const { return 0.0f; }
++
+ 	// Get number of sample-frames that should be used when playing beat
+ 	// (note with unspecified length)
+ 	// Per default this function returns 0. In this case, channel is using
+diff --git a/include/InstrumentTrack.h b/include/InstrumentTrack.h
+index d126391..5f57335 100644
+--- a/include/InstrumentTrack.h
++++ b/include/InstrumentTrack.h
+@@ -31,6 +31,7 @@
+ #include "InstrumentFunctions.h"
+ #include "InstrumentSoundShaping.h"
+ #include "Microtuner.h"
++#include "FractalGenerator.h"
+ #include "Midi.h"
+ #include "MidiEventProcessor.h"
+ #include "MidiPort.h"
+@@ -199,6 +200,11 @@ public:
+ 		return &m_piano;
+ 	}
+ 
++	FractalGenerator* fractalGenerator()
++	{
++		return &m_fractalGenerator;
++	}
++
+ 	Microtuner *microtuner()
+ 	{
+ 		return &m_microtuner;
+@@ -326,6 +332,7 @@ private:
+ 	Piano m_piano;
+ 
+ 	Microtuner m_microtuner;
++	FractalGenerator m_fractalGenerator;
+ 
+ 	std::unique_ptr<BoolModel> m_midiCCEnable;
+ 	std::unique_ptr<FloatModel> m_midiCCModel[MidiControllerCount];
+diff --git a/include/InstrumentTrackWindow.h b/include/InstrumentTrackWindow.h
+index e6a2f74..a65139a 100644
+--- a/include/InstrumentTrackWindow.h
++++ b/include/InstrumentTrackWindow.h
+@@ -48,6 +48,7 @@ class InstrumentFunctionArpeggioView;
+ class InstrumentFunctionNoteStackingView;
+ class InstrumentMidiIOView;
+ class InstrumentTuningView;
++class FractalGeneratorView;
+ class InstrumentSoundShapingView;
+ class InstrumentTrackView;
+ class Knob;
+@@ -163,6 +164,7 @@ private:
+ 	InstrumentMidiIOView * m_midiView;
+ 	EffectRackView * m_effectView;
+ 	InstrumentTuningView *m_tuningView;
++	FractalGeneratorView *m_fractalView;
+ 
+ 
+ 	// test-piano at the bottom of every instrument-settings-window
+diff --git a/include/MainWindow.h b/include/MainWindow.h
+index 28160d8..9df0d11 100644
+--- a/include/MainWindow.h
++++ b/include/MainWindow.h
+@@ -161,6 +161,7 @@ public slots:
+ 	void toggleSongEditorWin();
+ 	void toggleProjectNotesWin();
+ 	void toggleMicrotunerWin();
++	void toggleFractalWin();
+ 	void toggleMixerWin();
+ 	void togglePianoRollWin();
+ 	void toggleControllerRack();
+@@ -186,6 +187,7 @@ protected:
+ 
+ private:
+ 	MainWindow();
++	QWidget* m_fractalWindow = nullptr; //!< MANDELBROT fractal window (created on first use)
+ 	MainWindow( const MainWindow & );
+ 	~MainWindow() override;
+ 
+diff --git a/plugins/SlicerT/SlicerT.h b/plugins/SlicerT/SlicerT.h
+index e561086..ad15b6b 100644
+--- a/plugins/SlicerT/SlicerT.h
++++ b/plugins/SlicerT/SlicerT.h
+@@ -60,6 +60,15 @@ public:
+ 
+ 	QString getSampleName() { return m_originalSample.sampleFile(); }
+ 
++	//! MANDELBROT: lets the fractal engine re-chop this break in time with the song
++	std::vector<float> fractalSlicePoints() const override { return m_slicePoints; }
++	float fractalSliceBeats() const override
++	{
++		if (m_originalSample.sampleSize() <= 1 || m_originalSample.sampleRate() <= 0) { return 0.0f; }
++		return static_cast<float>(m_originalSample.sampleSize()) / m_originalSample.sampleRate()
++			* static_cast<float>(m_originalBPM.value()) / 60.0f;
++	}
++
+ 	QString nodeName() const override;
+ 	gui::PluginView* instantiateView(QWidget* parent) override;
+ 
+diff --git a/src/core/CMakeLists.txt b/src/core/CMakeLists.txt
+index 4f76d51..297d676 100644
+--- a/src/core/CMakeLists.txt
++++ b/src/core/CMakeLists.txt
+@@ -44,6 +44,11 @@ set(LMMS_SRCS
+ 	core/Metronome.cpp
+ 	core/MicroTimer.cpp
+ 	core/Microtuner.cpp
++	core/FractalEngine.cpp
++	core/FractalGenerator.cpp
++	core/fractal/FractalMath.cpp
++	core/fractal/PhraseHistory.cpp
++	core/fractal/Conductor.cpp
+ 	core/MixHelpers.cpp
+ 	core/Model.cpp
+ 	core/ModelVisitor.cpp
+diff --git a/src/core/Song.cpp b/src/core/Song.cpp
+index 5c42d34..b39ed95 100644
+--- a/src/core/Song.cpp
++++ b/src/core/Song.cpp
+@@ -23,6 +23,7 @@
+  */
+ 
+ #include "Song.h"
++#include "FractalEngine.h"
+ #include <QTextStream>
+ #include <QCoreApplication>
+ #include <QDebug>
+@@ -133,6 +134,9 @@ Song::Song() :
+ 
+ 	// Inform VST plugins if the user moved the play head
+ 	connect(this, &Song::playbackPositionJumped, this, [this](){ m_vstSyncController.setPlaybackJumped(true); }, Qt::DirectConnection);
++
++	// MANDELBROT: the song-wide fractal engine
++	FractalEngine::create();
+ }
+ 
+ 
+@@ -140,6 +144,7 @@ Song::Song() :
+ 
+ Song::~Song()
+ {
++	if (FractalEngine::instance() != nullptr) { FractalEngine::instance()->saveHistory(); }
+ 	m_playing = false;
+ 	delete m_globalAutomationTrack;
+ }
+@@ -335,6 +340,12 @@ void Song::processNextBuffer()
+ 			processAutomations(trackList, getPlayPos(), framesToPlay);
+ 			processMetronome(frameOffsetInPeriod);
+ 
++			// MANDELBROT: advance the fractal engine (song mode only) before the tracks play
++			if (m_playMode == PlayMode::Song && FractalEngine::instance() != nullptr)
++			{
++				FractalEngine::instance()->processTick(getPlayPos().getTicks());
++			}
++
+ 			for (const auto track : trackList)
+ 			{
+ 				track->play(getPlayPos(), framesToPlay, frameOffsetInPeriod, clipNum);
+@@ -693,6 +704,8 @@ void Song::stop()
+ 	// remove all note-play-handles that are active
+ 	Engine::audioEngine()->clear();
+ 
++	if (FractalEngine::instance() != nullptr) { FractalEngine::instance()->transportStopped(); }
++
+ 	// Moves the control of the models that were processed on the last frame
+ 	// back to their controllers.
+ 	for (auto it = m_oldAutomatedValues.begin(); it != m_oldAutomatedValues.end(); it++)
+@@ -858,6 +871,9 @@ void Song::clearProject()
+ 		stop();
+ 	}
+ 
++	// MANDELBROT: fresh fractal settings (a loaded project / template restores its own)
++	if (FractalEngine::instance() != nullptr) { FractalEngine::instance()->reset(); }
++
+ 	for (auto i = std::size_t{0}; i < PlayModeCount; i++)
+ 	{
+ 		setPlayPos( 0, ( PlayMode )i );
+@@ -1129,6 +1145,10 @@ void Song::loadProject( const QString & fileName )
+ 			{
+ 				restoreScaleStates(node.toElement());
+ 			}
++			else if (FractalEngine::instance() != nullptr && node.nodeName() == FractalEngine::instance()->nodeName())
++			{
++				FractalEngine::instance()->restoreState(node.toElement());
++			}
+ 			else if (node.nodeName() == "keymaps")
+ 			{
+ 				restoreKeymapStates(node.toElement());
+@@ -1246,6 +1266,7 @@ bool Song::saveProjectFile(const QString & filename, bool withResources)
+ 	saveControllerStates( dataFile, dataFile.content() );
+ 
+ 	saveScaleStates(dataFile, dataFile.content());
++	if (FractalEngine::instance() != nullptr) { FractalEngine::instance()->saveState(dataFile, dataFile.content()); }
+ 	saveKeymapStates(dataFile, dataFile.content());
+ 
+ 	m_savingProject = false;
+diff --git a/src/gui/CMakeLists.txt b/src/gui/CMakeLists.txt
+index ebe1e62..8d21233 100644
+--- a/src/gui/CMakeLists.txt
++++ b/src/gui/CMakeLists.txt
+@@ -66,6 +66,8 @@ SET(LMMS_SRCS
+ 	gui/instrument/InstrumentFunctionViews.cpp
+ 	gui/instrument/InstrumentMidiIOView.cpp
+ 	gui/instrument/InstrumentTuningView.cpp
++	gui/instrument/FractalGeneratorView.cpp
++	gui/FractalWindow.cpp
+ 	gui/instrument/InstrumentSoundShapingView.cpp
+ 	gui/instrument/InstrumentTrackWindow.cpp
+ 	gui/instrument/InstrumentView.cpp
+diff --git a/src/gui/MainWindow.cpp b/src/gui/MainWindow.cpp
+index 6409844..806954a 100644
+--- a/src/gui/MainWindow.cpp
++++ b/src/gui/MainWindow.cpp
+@@ -23,6 +23,7 @@
+  */
+ 
+ #include "MainWindow.h"
++#include "FractalWindow.h"
+ 
+ #include <QApplication>
+ #include <QCloseEvent>
+@@ -465,6 +466,12 @@ void MainWindow::finalize()
+ 	m_toolBarLayout->addWidget( mixer_window, 1, 5 );
+ 	m_toolBarLayout->addWidget( controllers_window, 1, 6 );
+ 	m_toolBarLayout->addWidget( project_notes_window, 1, 7 );
++
++	// MANDELBROT: the fractal window
++	auto fractal_window = new ToolButton(embed::getIconPixmap("fractal_window"),
++		tr("Fractal engine") + " (Ctrl+8)", this, SLOT(toggleFractalWin()), m_toolBar);
++	fractal_window->setShortcut(keySequence(Qt::CTRL, Qt::Key_8));
++	m_toolBarLayout->addWidget( fractal_window, 1, 8 );
+ 	m_toolBarLayout->setColumnStretch( 100, 1 );
+ 
+ 	// setup-dialog opened before?
+@@ -1037,6 +1044,21 @@ void MainWindow::toggleMicrotunerWin()
+ 
+ 
+ 
++void MainWindow::toggleFractalWin()
++{
++	if (m_fractalWindow == nullptr)
++	{
++		m_fractalWindow = new FractalWindow();
++		auto sub = addWindowedWidget(m_fractalWindow);
++		sub->resize(980, 640);
++		sub->hide();
++	}
++	toggleWindow(m_fractalWindow);
++}
++
++
++
++
+ void MainWindow::updateViewMenu()
+ {
+ 	m_viewMenu->clear();
+diff --git a/src/gui/instrument/InstrumentTrackWindow.cpp b/src/gui/instrument/InstrumentTrackWindow.cpp
+index f01c696..fea517c 100644
+--- a/src/gui/instrument/InstrumentTrackWindow.cpp
++++ b/src/gui/instrument/InstrumentTrackWindow.cpp
+@@ -50,6 +50,7 @@
+ #include "InstrumentFunctionViews.h"
+ #include "InstrumentMidiIOView.h"
+ #include "InstrumentTuningView.h"
++#include "FractalGeneratorView.h"
+ #include "InstrumentSoundShapingView.h"
+ #include "InstrumentTrack.h"
+ #include "InstrumentTrackView.h"
+@@ -260,12 +261,16 @@ InstrumentTrackWindow::InstrumentTrackWindow( InstrumentTrackView * _itv ) :
+ 	// Tuning tab
+ 	m_tuningView = new InstrumentTuningView(m_track, m_tabWidget);
+ 
++	// MANDELBROT: fractal engine tab
++	m_fractalView = new FractalGeneratorView(m_track->fractalGenerator(), m_tabWidget);
++
+ 
+ 	m_tabWidget->addTab(m_ssView, tr("Envelope, filter & LFO"), "env_lfo_tab", 1);
+ 	m_tabWidget->addTab(m_instrumentFunctionsView, tr("Chord stacking & arpeggio"), "func_tab", 2);
+ 	m_tabWidget->addTab(m_effectView, tr("Effects"), "fx_tab", 3);
+ 	m_tabWidget->addTab(m_midiView, tr("MIDI"), "midi_tab", 4);
+ 	m_tabWidget->addTab(m_tuningView, tr("Tuning and transposition"), "tuning_tab", 5);
++	m_tabWidget->addTab(m_fractalView, tr("Fractal engine"), "fractal_tab", 6);
+ 
+ 	// setup piano-widget
+ 	m_pianoView = new PianoView( this );
+@@ -303,6 +308,7 @@ void InstrumentTrackWindow::resizeEvent(QResizeEvent * event) {
+ 	adjustTabSize(m_effectView);
+ 	adjustTabSize(m_midiView);
+ 	adjustTabSize(m_tuningView);
++	adjustTabSize(m_fractalView);
+ }
+ 
+ 
+@@ -394,6 +400,7 @@ void InstrumentTrackWindow::modelChanged()
+ 	m_tuningView->scaleCombo()->setModel(m_track->m_microtuner.scaleModel());
+ 	m_tuningView->keymapCombo()->setModel(m_track->m_microtuner.keymapModel());
+ 	m_tuningView->rangeImportCheckbox()->setModel(m_track->m_microtuner.keyRangeImportModel());
++	m_fractalView->setModel(m_track->fractalGenerator());
+ 	updateName();
+ 
+ 	updateSubWindow();
+@@ -485,6 +492,7 @@ void InstrumentTrackWindow::updateInstrumentView()
+ 		m_effectView->setMaximumSize(maxSize);
+ 		m_midiView->setMaximumSize(maxSize);
+ 		m_tuningView->setMaximumSize(maxSize);
++		m_fractalView->setMaximumSize(maxSize);
+ 
+ 		m_ssView->setFunctionsHidden(m_track->m_instrument->isSingleStreamed());
+ 
+diff --git a/src/tracks/InstrumentTrack.cpp b/src/tracks/InstrumentTrack.cpp
+index 0ab889c..7f549e9 100644
+--- a/src/tracks/InstrumentTrack.cpp
++++ b/src/tracks/InstrumentTrack.cpp
+@@ -22,6 +22,7 @@
+  *
+  */
+ #include "InstrumentTrack.h"
++#include "FractalEngine.h"
+ 
+ #include "AudioEngine.h"
+ #include "AutomationClip.h"
+@@ -70,7 +71,8 @@ InstrumentTrack::InstrumentTrack(TrackContainer* tc) :
+ 	m_arpeggio(this),
+ 	m_noteStacking(this),
+ 	m_piano(this),
+-	m_microtuner()
++	m_microtuner(),
++	m_fractalGenerator(this)
+ {
+ 	m_pitchModel.setCenterValue( 0 );
+ 	m_pitchModel.setStrictStepSize(true);
+@@ -692,6 +694,12 @@ bool InstrumentTrack::play( const TimePos & _start, const f_cnt_t _frames,
+ 	}
+ 	const float frames_per_tick = Engine::framesPerTick();
+ 
++	// MANDELBROT: the fractal engine plays this track's role live (song-level tracks only)
++	if (_clip_num < 0 && trackContainer() == Engine::getSong())
++	{
++		m_fractalGenerator.processTick(_offset, frames_per_tick);
++	}
++
+ 	clipVector clips;
+ 	class PatternTrack * pattern_track = nullptr;
+ 	if( _clip_num >= 0 )
+@@ -828,6 +836,7 @@ void InstrumentTrack::saveTrackSpecificSettings(QDomDocument& doc, QDomElement&
+ 	m_lastKeyModel.saveSettings(doc, thisElement, "lastkey");
+ 	m_useMasterPitchModel.saveSettings( doc, thisElement, "usemasterpitch");
+ 	m_microtuner.saveSettings(doc, thisElement);
++	m_fractalGenerator.saveState(doc, thisElement);
+ 
+ 	// Save MIDI CC stuff
+ 	m_midiCCEnable->saveSettings(doc, thisElement, "enablecc");
+@@ -926,6 +935,10 @@ void InstrumentTrack::loadTrackSpecificSettings( const QDomElement & thisElement
+ 			{
+ 				m_arpeggio.restoreState( node.toElement() );
+ 			}
++			else if (m_fractalGenerator.nodeName() == node.nodeName())
++			{
++				m_fractalGenerator.restoreState(node.toElement());
++			}
+ 			else if( m_midiPort.nodeName() == node.nodeName() )
+ 			{
+ 				m_midiPort.restoreState( node.toElement() );
