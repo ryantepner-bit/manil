@@ -94,6 +94,7 @@ void SynthEngine::noteOn (int note, float vel)
         }
     }
     auto& v = *target;
+    const bool wasActive = v.active;
     const float glideTime = params[SynthP::glide].load();
     v.active = true; v.released = false;
     v.note = note; v.velocity = vel;
@@ -105,10 +106,16 @@ void SynthEngine::noteOn (int note, float vel)
     v.fmCar = v.fmMod = v.fmFb = 0.0f;
     v.grainTimer = 0.0f;
     for (auto& g : v.grains) g.active = false;
-    v.fL.reset(); v.fR.reset();
+    if (! wasActive)
+    {
+        // fresh voice: start clean. A stolen voice keeps its filter/oscillator state and
+        // its envelope continues from where it is (no click).
+        v.fL.reset(); v.fR.reset();
+        v.o1.phase = v.noise.uni(); v.o2.phase = v.noise.uni();
+        v.u1.phase = v.noise.uni(); v.u2.phase = v.noise.uni();
+    }
     v.filterCounter = 0;
     v.amp.noteOn(); v.mod.noteOn();
-    if (v.amp.value > 0.0f) v.amp.value *= 0.5f; // soften retrigger of stolen voice
 }
 
 void SynthEngine::noteOff (int note)
@@ -229,8 +236,15 @@ void SynthEngine::renderVoice (Voice& v, float* L, float* R, int start, int n, c
         {
             case 0: // subtractive
             {
-                const float det = std::exp2 ((p[osc2Semi] + p[osc2Detune] * 0.01f + p[unisonDetune] * 0.15f) / 12.0f);
-                const float a = v.o1.process ((int) p[osc1Wave], inc);
+                const float det = std::exp2 ((p[osc2Semi] + p[osc2Detune] * 0.01f) / 12.0f);
+                float a = v.o1.process ((int) p[osc1Wave], inc);
+                const float uni = p[unisonDetune];
+                if (uni > 0.001f)
+                {
+                    // 3-voice unison on osc 1 (up to +-30 cents)
+                    const float spread = std::exp2 (uni * 0.3f / 12.0f);
+                    a = (a + v.u1.process ((int) p[osc1Wave], inc * spread) + v.u2.process ((int) p[osc1Wave], inc / spread)) * 0.55f;
+                }
                 const float b = v.o2.process ((int) p[osc2Wave], inc * det);
                 const float sb = v.sub.process (3, inc * 0.5f);
                 const float mix = juce::jlimit (0.0f, 1.0f, p[oscMix] + mMix);

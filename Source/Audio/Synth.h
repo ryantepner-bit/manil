@@ -54,7 +54,7 @@ private:
         int note = 60; float velocity = 0; float pitch = 60, pitchTarget = 60;
         juce::uint32 age = 0;
         float random = 0;
-        DSP::Osc o1, o2, sub;
+        DSP::Osc o1, o2, sub, u1, u2;   // u1/u2: unison copies of osc 1
         DSP::Rng noise;
         float fmCar = 0, fmMod = 0, fmFb = 0;
         float wtPhase = 0;
