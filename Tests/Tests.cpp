@@ -7,6 +7,10 @@
 #include "Audio/Engine.h"
 #include "Audio/Exporter.h"
 #include "UI/Composer.h"
+#include "Live/LiveSequencer.h"
+#include "UI/ArrangementView.h"
+#include "UI/LivePage.h"
+#include <set>
 
 static int failures = 0, checks = 0;
 #define CHECK(cond) do { ++checks; if (! (cond)) { ++failures; std::cerr << "FAIL " << __FILE__ << ":" << __LINE__ << "  " #cond "\n"; } } while (0)
@@ -208,7 +212,7 @@ static void testEngineRender()
         CHECK (Exporter::exportMidi (p, mf, err));
         juce::MidiFile m; juce::FileInputStream is (mf);
         CHECK (m.readFrom (is));
-        CHECK (m.getNumTracks() == 5);  // meta + 4 instrument tracks
+        CHECK (m.getNumTracks() == 6);  // meta + 5 instrument tracks
         int notes = 0;
         for (int t = 0; t < m.getNumTracks(); ++t) for (auto* e : *m.getTrack (t)) notes += e->message.isNoteOn();
         CHECK (notes > 20);
@@ -216,6 +220,9 @@ static void testEngineRender()
     }
     // realtime-path smoke test: run the callback path directly with a fake device buffer
     {
+        p.setProperty (IDs::loopOn, true, nullptr);      // timeline selection 0..16
+        p.setProperty (IDs::loopStart, 0.0, nullptr);
+        p.setProperty (IDs::loopEnd, 16.0, nullptr);
         engine.play();
         Engine::Transport tr; tr.playing = true;
         std::vector<float> L (512), R (512);
@@ -240,11 +247,11 @@ static void testComposer()
 
     // one generator per instrument track
     std::vector<juce::ValueTree> gens;
-    const int roles[] = { Gen::Breaks, Gen::Bass, Gen::Melody, Gen::Chords };
+    const int roles[] = { Gen::Breaks, Gen::Bass, Gen::Chords, Gen::Melody, Gen::Arp };
     int i = 0;
     for (auto t : Model::tracks (state.project))
         if (t[IDs::type].toString() != "audio") gens.push_back (composer.addGenerator (t[IDs::id], roles[i++]));
-    CHECK (gens.size() == 4);
+    CHECK (gens.size() == 5);
 
     // generate, then evolve: motif is kept and mutated, generation counts up
     auto clip = composer.generate (gens[2], 0.0);
@@ -288,13 +295,290 @@ static void testComposer()
     bad.getParent().removeChild (bad, nullptr);
     const int n = composer.renderPathToArrangement (path);
     std::cout << "path render produced " << n << " clips\n";
-    CHECK (n == 4 * 3);   // 4 generators x phrases at beats 0, 16, 32
+    CHECK (n == 5 * 3);   // 5 generators x phrases at beats 0, 16, 32
     // phrases along the path differ musically (different regions)
     auto lead = Model::findTrack (state.project, 3);
     std::vector<juce::ValueTree> pathClips;
     for (auto c : lead.getChildWithName (IDs::CLIPS)) if ((double) c[IDs::start] >= 0 && c[IDs::name].toString().contains ("Gen")) pathClips.push_back (c);
     CHECK (pathClips.size() >= 3);
     engine.rebuildNow();
+}
+
+
+// ---------------------------------------------------------------------------- live generative mode
+struct LiveRig
+{
+    Engine engine;
+    AppState state { engine };
+    std::unique_ptr<Composer> composer;
+    Engine::Transport tr;
+    std::vector<float> L = std::vector<float> (256), R = std::vector<float> (256);
+    float peak = 0.0f; bool finite = true;
+    LiveRig()
+    {
+        state.project = Model::createDefaultProject();
+        engine.setProject (state.project);
+        composer = std::make_unique<Composer> (state);
+        composer->setProject (state.project);
+    }
+    juce::AudioBuffer<float>* record = nullptr; int recPos = 0;
+    void run (int blocks)
+    {
+        for (int k = 0; k < blocks; ++k)
+        {
+            tr.playing = engine.isPlaying();
+            engine.processBlock (L.data(), R.data(), nullptr, nullptr, 256, tr, -1, false);
+            if (record != nullptr && recPos + 256 <= record->getNumSamples())
+            { record->copyFrom (0, recPos, L.data(), 256); record->copyFrom (1, recPos, R.data(), 256); recPos += 256; }
+            for (int j = 0; j < 256; ++j) { peak = std::max (peak, std::abs (L[(size_t) j])); finite &= std::isfinite (L[(size_t) j]) && std::isfinite (R[(size_t) j]); }
+            if (k % 8 == 7) composer->liveTickNow();     // ~46 ms, like the 20 Hz timer
+        }
+        composer->liveTickNow();
+    }
+    int blocksForBars (double bars) const { return (int) std::ceil (bars * 4.0 * 60.0 / state.tempo() * engine.getSampleRate() / 256.0); }
+};
+
+static void testLive()
+{
+    juce::ScopedJuceInitialiser_GUI init;
+    LiveRig rig;
+    CHECK (rig.engine.isLiveOn());
+    CHECK (rig.engine.getLive().hasFrame());
+    const double x0 = rig.composer->probeX(), y0 = rig.composer->probeY();
+    rig.engine.play();
+    juce::AudioBuffer<float> rec (2, rig.blocksForBars (16) * 256);
+    rig.record = &rec;
+    rig.run (rig.blocksForBars (16));
+    rig.record = nullptr;
+    if (auto w = makeWavWriter (juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("mandel_live.wav"), rig.engine.getSampleRate(), 2, 16))
+        w->writeFromAudioSampleBuffer (rec, 0, rig.recPos);
+    const auto& hist = rig.composer->liveHistory();
+    std::cout << "live: " << hist.size() << " notes in 16 bars, peak " << rig.peak << ", probe moved to " << rig.composer->probeX() << ", " << rig.composer->probeY() << "\n";
+    CHECK (rig.peak > 0.02f && rig.peak < 1.5f);
+    CHECK (rig.finite);
+    CHECK (rig.composer->probeX() != x0 || rig.composer->probeY() != y0);     // drift
+    int perPart[Live::NumParts] = {};
+    bool inKey = true;
+    std::set<int> leadPitches;
+    std::vector<int> leadEarly, leadLate;
+    const double bpb = rig.state.beatsPerBar();
+    for (auto& n : hist)
+    {
+        perPart[n.part]++;
+        if (n.part != Live::Drums && ! Scales::contains (n.pitch, 9, Scales::Dorian, 0xfff)) inKey = false;
+        if (n.part == Live::Lead)
+        {
+            leadPitches.insert (n.pitch);
+            if (n.start >= 2 * bpb && n.start < 4 * bpb) leadEarly.push_back (n.pitch);
+            if (n.start >= 12 * bpb && n.start < 14 * bpb) leadLate.push_back (n.pitch);
+        }
+    }
+    for (int p = 1; p < Live::NumParts; ++p) { std::cout << "  " << Live::partNames()[p] << ": " << perPart[p] << "\n"; CHECK (perPart[p] > 0); }
+    CHECK (inKey);                                   // everything mapped onto A dorian
+    CHECK (leadPitches.size() >= 4);
+    CHECK (leadEarly != leadLate);                   // always evolving
+    CHECK (perPart[Live::Drums] > 16 * 4);
+
+    // key change applies immediately
+    auto live = Model::liveNode (rig.state.project);
+    live.setProperty (IDs::root, 0, nullptr);
+    live.setProperty (IDs::scale, (int) Scales::PentatonicMinor, nullptr);
+    rig.composer->liveTickNow();
+    const auto before = rig.composer->liveHistory().size();
+    rig.run (rig.blocksForBars (4));
+    bool inPenta = true; int counted = 0;
+    const auto& h2 = rig.composer->liveHistory();
+    for (size_t i = before; i < h2.size(); ++i)
+        if (h2[i].part != Live::Drums && h2[i].start > rig.engine.getLiveBeat() - 3 * bpb) { ++counted; inPenta &= Scales::contains (h2[i].pitch, 0, Scales::PentatonicMinor, 0xfff); }
+    CHECK (counted > 0 && inPenta);
+
+    // part off -> silent part
+    for (auto lp : live) if ((int) lp[IDs::id] == Live::Lead) lp.setProperty (IDs::liveOn, false, nullptr);
+    rig.composer->liveTickNow();
+    const double offFrom = rig.engine.getLiveBeat();
+    rig.run (rig.blocksForBars (2));
+    int leadAfter = 0;
+    for (auto& n : rig.composer->liveHistory()) if (n.part == Live::Lead && n.start > offFrom + 0.01) ++leadAfter;
+    CHECK (leadAfter == 0);
+
+    // capture into the arrangement
+    const int clips = rig.composer->captureLive (8);
+    std::cout << "captured clips: " << clips << "\n";
+    CHECK (clips >= 4);
+    int notesInClips = 0;
+    for (auto t : Model::tracks (rig.state.project))
+        for (auto c : t.getChildWithName (IDs::CLIPS)) { notesInClips += (int) Model::readNotes (c).size(); CHECK ((double) c[IDs::length] == 8 * bpb); }
+    CHECK (notesInClips > 30);
+    rig.state.undo.undo();
+    CHECK (Model::projectEndBeat (rig.state.project) == 0.0);
+
+    // stop: everything is released
+    rig.engine.stop();
+    rig.run (rig.blocksForBars (3));
+    int voices = 0;
+    for (auto t : Model::tracks (rig.state.project))
+        if (auto* tp = rig.engine.getTrackProcessor (t[IDs::id]); tp != nullptr && tp->synth) voices += tp->synth->activeVoiceCount();
+    CHECK (voices == 0);
+}
+
+static void testTransportFL()
+{
+    juce::ScopedJuceInitialiser_GUI init;
+    Engine engine;
+    auto p = Model::createDefaultProject();
+    Model::liveNode (p).setProperty (IDs::liveOn, false, nullptr);
+    engine.setProject (p);
+    auto bass = Model::findTrack (p, 2);
+    auto clip = Model::addMidiClip (bass, 0.0, 8.0, nullptr);
+    Model::addMidiClip (bass, 16.0, 6.0, nullptr);
+    engine.rebuildNow();
+    // SONG: loops at the end of the song (rounded up to the bar)
+    CHECK (engine.isLoopActive() && engine.getLoopStart() == 0.0 && engine.getLoopEnd() == 24.0);
+    // timeline selection wins
+    p.setProperty (IDs::loopStart, 4.0, nullptr); p.setProperty (IDs::loopEnd, 12.0, nullptr); p.setProperty (IDs::loopOn, true, nullptr);
+    CHECK (engine.isLoopActive() && engine.getLoopStart() == 4.0 && engine.getLoopEnd() == 12.0);
+    p.setProperty (IDs::loopOn, false, nullptr);
+    // PAT: loops the selected clip
+    p.setProperty (IDs::songMode, false, nullptr);
+    engine.setPatternClip ((int) clip[IDs::id]);
+    CHECK (engine.isLoopActive() && engine.getLoopStart() == 0.0 && engine.getLoopEnd() == 8.0);
+    // live on: no song loop
+    p.setProperty (IDs::songMode, true, nullptr);
+    Model::liveNode (p).setProperty (IDs::liveOn, true, nullptr);
+    CHECK (! engine.isLoopActive());
+    Model::liveNode (p).setProperty (IDs::liveOn, false, nullptr);
+    // Space = play / stop and return to where it started
+    engine.setPosition (3.0);
+    engine.play();
+    Engine::Transport tr; tr.playing = true; tr.beat = 3.0;
+    std::vector<float> L (256), R (256);
+    for (int k = 0; k < 400; ++k) engine.processBlock (L.data(), R.data(), nullptr, nullptr, 256, tr, -1, false);
+    CHECK (tr.beat > 3.0 || tr.loopPass > 0);
+    engine.stop();
+    CHECK (std::abs (engine.getPosition() - 3.0) < 1e-9);
+    engine.stop();
+    CHECK (engine.getPosition() == 0.0);
+    // song loop actually wraps
+    Engine::Transport t2; t2.playing = true; t2.beat = 23.0;
+    for (int k = 0; k < 200; ++k) engine.processBlock (L.data(), R.data(), nullptr, nullptr, 256, t2, -1, false);
+    CHECK (t2.loopPass >= 1 && t2.beat < 24.0);
+}
+
+static void testGenerateVariety()
+{
+    juce::ScopedJuceInitialiser_GUI init;
+    Engine engine;
+    AppState state (engine);
+    state.project = Model::createDefaultProject();
+    engine.setProject (state.project);
+    Composer composer (state);
+    composer.setProject (state.project);
+    auto g = composer.addGenerator (4, Gen::Melody);
+    auto c1 = composer.generate (g, 0.0);
+    auto c2 = composer.generate (g, 0.0);       // same place, same probe: must still be new
+    CHECK (c1.isValid() && c2.isValid() && c1 != c2);
+    CHECK ((double) c2[IDs::start] >= (double) c1[IDs::start] + (double) c1[IDs::length] - 1e-9);   // not stacked
+    auto n1 = Model::readNotes (c1), n2 = Model::readNotes (c2);
+    bool same = n1.size() == n2.size();
+    for (size_t i = 0; same && i < n1.size(); ++i) same = n1[i].pitch == n2[i].pitch && n1[i].start == n2[i].start;
+    CHECK (! same);
+}
+
+// ---------------------------------------------------------------------------- arrangement interaction (simulated mouse)
+static juce::MouseEvent mouseAt (juce::Component& c, juce::Point<float> p, juce::ModifierKeys mods = {}, int clicks = 1, juce::Point<float> down = { -1, -1 })
+{
+    auto src = juce::Desktop::getInstance().getMainMouseSource();
+    if (down.x < 0) down = p;
+    return juce::MouseEvent (src, p, mods, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, &c, &c, juce::Time::getCurrentTime(), down, juce::Time::getCurrentTime(), clicks, p != down);
+}
+
+static void testArrangementUI()
+{
+    juce::ScopedJuceInitialiser_GUI init;
+    if (juce::Desktop::getInstance().getDisplays().getPrimaryDisplay() == nullptr) { std::cout << "arrangement UI test skipped (no display)\n"; return; }
+    Engine engine;
+    AppState state (engine);
+    state.project = Model::createDefaultProject();
+    Model::liveNode (state.project).setProperty (IDs::liveOn, false, nullptr);
+    engine.setProject (state.project);
+    Composer composer (state);
+    composer.setProject (state.project);
+    ArrangementView view (state, composer);
+    view.setProject (state.project);
+    view.setSize (1400, 700);
+    auto& body = *view.getChildComponent (0);
+    const float ppb = 24.0f, headerW = 220.0f, rulerH = 30.0f;
+    auto xOf = [&] (double beat) { return headerW + (float) beat * ppb; };
+    auto yOfTrack = [&] (int index) { return rulerH + index * 64.0f + 32.0f; };
+    auto bass = Model::findTrack (state.project, 2);
+    auto clipsOf = [] (juce::ValueTree t) { return t.getChildWithName (IDs::CLIPS); };
+
+    // double-click empty space on a synth track creates a 2-bar MIDI clip at that bar
+    view.mouseDoubleClick (mouseAt (body, { xOf (5.0), yOfTrack (1) }, {}, 2));
+    CHECK (clipsOf (bass).getNumChildren() == 1);
+    auto clip = clipsOf (bass).getChild (0);
+    CHECK ((double) clip[IDs::start] == 4.0 && (double) clip[IDs::length] == 8.0);
+    CHECK (state.selectedClip == clip);
+
+    // drag the clip body 4 beats to the right
+    const juce::Point<float> grab (xOf (6.0), yOfTrack (1));
+    view.mouseDown (mouseAt (body, grab));
+    view.mouseDrag (mouseAt (body, grab + juce::Point<float> (4 * ppb, 0), {}, 1, grab));
+    view.mouseUp (mouseAt (body, grab + juce::Point<float> (4 * ppb, 0), {}, 1, grab));
+    CHECK ((double) clip[IDs::start] == 8.0);
+
+    // drag the right edge to make it 4 beats longer
+    const juce::Point<float> edge (xOf (16.0) - 2.0f, yOfTrack (1));
+    view.mouseDown (mouseAt (body, edge));
+    view.mouseDrag (mouseAt (body, edge + juce::Point<float> (4 * ppb, 0), {}, 1, edge));
+    view.mouseUp (mouseAt (body, edge + juce::Point<float> (4 * ppb, 0), {}, 1, edge));
+    CHECK ((double) clip[IDs::length] == 12.0);
+
+    // drag it down onto the Chords track (same kind)
+    auto chords = Model::findTrack (state.project, 3);
+    const juce::Point<float> g2 (xOf (10.0), yOfTrack (1));
+    view.mouseDown (mouseAt (body, g2));
+    view.mouseDrag (mouseAt (body, g2 + juce::Point<float> (0, 64), {}, 1, g2));
+    view.mouseUp (mouseAt (body, g2 + juce::Point<float> (0, 64), {}, 1, g2));
+    CHECK (clipsOf (chords).getNumChildren() == 1 && clipsOf (bass).getNumChildren() == 0);
+
+    // undo puts it back on the bass track
+    state.undo.undo();
+    CHECK (clipsOf (bass).getNumChildren() == 1);
+
+    // ruler: drag = loop selection, click = clear selection + move playhead
+    const juce::Point<float> r0 (xOf (4.0), 15.0f);
+    view.mouseDown (mouseAt (body, r0));
+    view.mouseDrag (mouseAt (body, { xOf (12.0), 15.0f }, {}, 1, r0));
+    view.mouseUp (mouseAt (body, { xOf (12.0), 15.0f }, {}, 1, r0));
+    CHECK ((bool) state.project[IDs::loopOn] && (double) state.project[IDs::loopStart] == 4.0 && (double) state.project[IDs::loopEnd] == 12.0);
+    CHECK (engine.isLoopActive() && engine.getLoopStart() == 4.0);
+    const juce::Point<float> r1 (xOf (2.0), 15.0f);
+    view.mouseDown (mouseAt (body, r1));
+    view.mouseUp (mouseAt (body, r1));
+    CHECK (! (bool) state.project[IDs::loopOn]);
+    CHECK (std::abs (engine.getPosition() - 2.0) < 1e-9);
+
+    // duplicate, split, delete
+    state.selectClip (clip);
+    view.duplicateSelected();
+    CHECK (clipsOf (bass).getNumChildren() == 2);
+    engine.setPosition ((double) state.selectedClip[IDs::start] + 4.0);
+    view.splitSelectedAtPlayhead();
+    CHECK (clipsOf (bass).getNumChildren() == 3);
+    view.deleteSelected();
+    CHECK (clipsOf (bass).getNumChildren() == 2);
+
+    // add track
+    const int before = Model::tracks (state.project).getNumChildren();
+    view.addTrack ("synth");
+    CHECK (Model::tracks (state.project).getNumChildren() == before + 1);
+
+    // the Live page builds and lays out with this project
+    LivePage live (state, composer);
+    live.setProject (state.project);
+    live.setSize (1400, 800);
+    CHECK (live.getNumChildComponents() > 10);
 }
 
 int main()
@@ -306,6 +590,10 @@ int main()
     testSnapshotEvents();
     testEngineRender();
     testComposer();
+    testLive();
+    testTransportFL();
+    testGenerateVariety();
+    testArrangementUI();
     std::cout << checks << " checks, " << failures << " failures\n";
     return failures == 0 ? 0 : 1;
 }
