@@ -1,5 +1,6 @@
 #include "DrumPage.h"
 #include "../Generative/Generator.h"
+#include "../Audio/SampleLibrary.h"
 
 static const juce::StringArray rateNames { "1/4", "1/8", "1/8 T", "1/16", "1/16 x5", "1/16 T", "1/16 x7", "1/32" };
 
@@ -375,6 +376,40 @@ DrumPage::DrumPage (AppState& s, Composer& c) : state (s), composer (c), grid (s
         chooser->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles, [this] (const juce::FileChooser& fc) { if (fc.getResult().existsAsFile()) sliceToPads (fc.getResult()); });
     };
     for (auto* b : { &loadSample, &clearSample, &slice }) addAndMakeVisible (b);
+    kitBox.addItemList (SampleLib::kitNames(), 1);
+    kitBox.setTooltip ("Load a whole kit from your sample folder (set it on the Live page)");
+    kitBox.onChange = [this]
+    {
+        if (! track.isValid() || kitBox.getText() == track.getProperty (IDs::kit, "Synth").toString()) return;
+        if (kitBox.getText() != "Synth" && SampleLib::get().total() == 0) { if (state.setStatus) state.setStatus ("No samples in the sample folder yet: use 'Get free drums' or 'Sample folder...' on the Live page"); return; }
+        state.beginEdit ("Drum kit");
+        Model::applyKit (track, kitBox.getText(), 1, &state.undo);
+    };
+    shuffleKit.setTooltip ("Same kit style, different samples");
+    shuffleKit.onClick = [this]
+    {
+        if (! track.isValid()) return;
+        state.beginEdit ("Shuffle kit");
+        Model::applyKit (track, kitBox.getText() == "Synth" ? "Random" : kitBox.getText(), (juce::uint32) juce::Random::getSystemRandom().nextInt (100000), &state.undo);
+    };
+    auto step = [this] (int dir)
+    {
+        auto p = padNode (selectedPad);
+        if (! p.isValid()) return;
+        const auto next = SampleLib::stepSample (selectedPad, juce::File (p[IDs::sample].toString()), dir);
+        if (next == juce::File() || ! next.existsAsFile()) { if (state.setStatus) state.setStatus ("No samples for this pad in the sample folder"); return; }
+        state.beginEdit ("Pad sample");
+        p.setProperty (IDs::sample, next.getFullPathName(), &state.undo);
+        p.setProperty (IDs::name, next.getFileNameWithoutExtension().substring (0, 16), &state.undo);
+        p.setProperty ("sliceStart", 0.0f, &state.undo); p.setProperty ("sliceEnd", 1.0f, &state.undo);
+        state.engine.sendLiveNote (track[IDs::id], PadP::baseNote + selectedPad, 0.9f);
+        state.engine.sendLiveNote (track[IDs::id], PadP::baseNote + selectedPad, 0.0f);
+    };
+    prevSample.onClick = [step] { step (-1); };
+    nextSample.onClick = [step] { step (1); };
+    prevSample.setTooltip ("Previous sample of this kind (kick, snare...) from the sample folder");
+    nextSample.setTooltip ("Next sample of this kind from the sample folder");
+    for (auto* b : std::initializer_list<juce::Component*> { &kitBox, &shuffleKit, &prevSample, &nextSample }) addAndMakeVisible (b);
     padTitle.setFont (Theme::font (13.0f, true));
     addAndMakeVisible (padTitle);
     addAndMakeVisible (wave);
@@ -430,7 +465,8 @@ void DrumPage::bindTrack (juce::ValueTree t)
     grid.setClip (clip, track);
     swing.setValue (clip.isValid() ? (double) Model::patternOf (clip).getProperty (IDs::swing, 0.0) : 0.0, juce::dontSendNotification);
     title.setText (track.isValid() ? "DRUM MACHINE  /  " + track[IDs::name].toString() : "No drum track - add one in the Arrangement", juce::dontSendNotification);
-    for (auto* b : { &newPattern, &genBreak, &mutateBreak, &clearPat, &loadSample, &clearSample, &slice }) b->setEnabled (track.isValid());
+    for (auto* b : { &newPattern, &genBreak, &mutateBreak, &clearPat, &loadSample, &clearSample, &slice, &shuffleKit, &prevSample, &nextSample }) b->setEnabled (track.isValid());
+    kitBox.setSelectedItemIndex (juce::jmax (0, SampleLib::kitNames().indexOf (track.getProperty (IDs::kit, "Synth").toString())), juce::dontSendNotification);
     selectPad (selectedPad);
 }
 
@@ -468,6 +504,7 @@ void DrumPage::valueTreePropertyChanged (juce::ValueTree& t, const juce::Identif
             juce::MessageManager::callAsync ([sp = juce::Component::SafePointer<DrumPage> (this)] { if (sp) sp->selectPad (sp->selectedPad); });
     }
     if (t.hasType (IDs::TRACK) && prop == IDs::name) refresh();
+    if (t == track && prop == IDs::kit) kitBox.setSelectedItemIndex (juce::jmax (0, SampleLib::kitNames().indexOf (track.getProperty (IDs::kit, "Synth").toString())), juce::dontSendNotification);
     if (t.hasType (IDs::PATTERN) && clip.isValid() && t == Model::patternOf (clip) && prop == IDs::swing && ! swing.isMouseButtonDown())
         swing.setValue ((double) t[IDs::swing], juce::dontSendNotification);
 }
@@ -608,7 +645,11 @@ void DrumPage::resized()
         pads[i]->setBounds (juce::Rectangle<int> (padGrid.getX() + (i % 4) * pw, padGrid.getY() + (2 - i / 4) * ph, pw, ph).reduced (3));   // MPC layout, pad 1 bottom-left
     bottom.removeFromLeft (12);
     auto head = bottom.removeFromTop (24);
-    padTitle.setBounds (head.removeFromLeft (360));
+    padTitle.setBounds (head.removeFromLeft (300));
+    prevSample.setBounds (head.removeFromLeft (26)); head.removeFromLeft (2);
+    nextSample.setBounds (head.removeFromLeft (26)); head.removeFromLeft (8);
+    kitBox.setBounds (head.removeFromLeft (100)); head.removeFromLeft (4);
+    shuffleKit.setBounds (head.removeFromLeft (90)); head.removeFromLeft (6);
     slice.setBounds (head.removeFromRight (150)); head.removeFromRight (6);
     clearSample.setBounds (head.removeFromRight (100)); head.removeFromRight (6);
     loadSample.setBounds (head.removeFromRight (100)); head.removeFromRight (6);
