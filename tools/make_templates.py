@@ -76,6 +76,26 @@ def delay(wet=0.3, time=0.375, fb=0.35):
             f'<Delay DelayTimeSamples="{time}" FeebackAmount="{fb}" LfoFrequency="2" LfoAmount="0" OutGain="0"/><key/></effect>')
 
 
+def cloud(wet=0.5, grain=140, density=12, pitch=0, spray=7, scatter=0.8, width=0.8, fractal=0.5, inkey=1, freeze=0):
+    """MANDELBROT granular cloud (plugins/MandelCloud)"""
+    a = attrs(dict(grain=grain, density=density, pitch=pitch, spray=spray, scatter=scatter, width=width,
+                   fractal=fractal, gain=1, freeze=freeze, inkey=inkey))
+    return f'<effect name="mandelcloud" on="1" wet="{wet}" autoquit="1" gate="0"><MandelCloudControls {a}/><key/></effect>'
+
+
+def spectral(wet=0.45, decay=0.75, damp=0.5, blur=0.35, shift=0, fractal=0.5):
+    """MANDELBROT phase-vocoder reverb / blur (plugins/MandelSpectral)"""
+    a = attrs(dict(decay=decay, damp=damp, blur=blur, shift=shift, fractal=fractal, gain=1, freeze=0))
+    return f'<effect name="mandelspectral" on="1" wet="{wet}" autoquit="1" gate="0"><MandelSpectralControls {a}/><key/></effect>'
+
+
+def resonator(wet=0.35, decay=5, voices=4, octave=0, bright=0.5, drive=0.3, fractal=0.5):
+    """MANDELBROT waveguide bank that follows the fractal's chords (plugins/MandelResonator)"""
+    a = attrs(dict(decay=decay, voices=voices, octave=octave, root=9, bright=bright, drive=drive, fractal=fractal,
+                   gain=1, follow=1))
+    return f'<effect name="mandelresonator" on="1" wet="{wet}" autoquit="1" gate="0"><MandelResonatorControls {a}/><key/></effect>'
+
+
 def fxchain(effects):
     if not effects:
         return '<fxchain numofeffects="0" enabled="0"/>'
@@ -188,7 +208,7 @@ def idm(length=0):
         track("Bass", b, "Bass", vol=85, eld=be),
         track("Chords", k, "Chords", vol=55, eld=ke, effects=[reverb(0.35, 0.85)]),
         track("Lead", l, "Lead", vol=60, eld=le, effects=[delay(0.25, 0.375, 0.3), reverb(0.25, 0.8)]),
-        track("Arp", p, "Arp", vol=40, pan=15, eld=pe, effects=[delay(0.3, 0.1875, 0.4)]),
+        track("Arp", p, "Arp", vol=40, pan=15, eld=pe, effects=[delay(0.3, 0.1875, 0.4), cloud(0.2, 60, 8, 12, 0, 0.3, 0.9)]),
     ]
     return project("IDM", t, 128)
 
@@ -198,11 +218,14 @@ def ambient(length=0):
     tx, txe = texture_sound(); l, le = lead_sound(); p, pe = pluck_sound()
     big = reverb(0.55, 0.97, 6000)
     t = [
-        track("Drone", d, "Drone", vol=60, eld=de, effects=[reverb(0.45, 0.95, 5000)], length_clip=length),
-        track("Pad", pa, "Pad", vol=50, eld=pae, effects=[big]),
+        track("Drone", d, "Drone", vol=60, eld=de, effects=[resonator(0.3, 6, 4, 0, 0.4, 0.25), reverb(0.45, 0.95, 5000)],
+              length_clip=length),
+        track("Pad", pa, "Pad", vol=50, eld=pae, effects=[spectral(0.45, 0.8, 0.5, 0.4), big]),
         track("Low end", b, "Bass", vol=60, density=0.4, eld=be),
-        track("Bells", bl, "Bells", vol=45, pan=-20, eld=ble, effects=[delay(0.35, 0.5, 0.45), big]),
-        track("Texture", tx, "Texture", vol=40, pan=25, eld=txe, effects=[delay(0.4, 0.75, 0.5), big]),
+        track("Bells", bl, "Bells", vol=45, pan=-20, eld=ble,
+              effects=[cloud(0.35, 220, 10, 0, 12, 1.5, 0.9), delay(0.35, 0.5, 0.45), big]),
+        track("Texture", tx, "Texture", vol=40, pan=25, eld=txe,
+              effects=[cloud(0.6, 320, 16, 0, 7, 2.5, 1.0), spectral(0.35, 0.7, 0.6, 0.6), big]),
         track("Melody", l, "Lead", vol=45, density=0.35, eld=le, effects=[delay(0.35, 0.75, 0.4), big]),
         track("Glass arp", p, "Arp", vol=30, density=0.35, eld=pe, effects=[delay(0.4, 0.5, 0.5), big]),
         track("Shaker", afp(DRUMS + "egg-shaker.flac"), "Shaker", vol=35, pan=30, effects=[reverb(0.4, 0.9)]),
