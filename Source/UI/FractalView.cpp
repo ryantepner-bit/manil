@@ -398,7 +398,7 @@ FractalPage::FractalPage (AppState& s, Composer& c) : state (s), composer (c), c
     autoIter.setToggleState (true, juce::dontSendNotification);
     autoIter.onClick = [this] { canvas.autoIterations = autoIter.getToggleState(); auto v = canvas.getView(); canvas.setView (v.cx, v.cy, v.scale, false); };
     hq.onClick = [this] { canvas.setSupersample (hq.getToggleState()); };
-    follow.setToggleState (true, juce::dontSendNotification);
+    follow.setToggleState (false, juce::dontSendNotification);
     follow.onClick = [this] { state.probeFollowsView = follow.getToggleState(); };
     for (auto* b : { &autoIter, &hq, &follow }) addAndMakeVisible (b);
 
