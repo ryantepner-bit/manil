@@ -6,7 +6,8 @@ bash manil/ci/fetch.sh 2>&1 | tee logs/fetch.log || exit 1
 ( cd src && sudo bash ../manil/ci/setup-mingw.sh && \
   sudo apt-get install -y --no-install-recommends $(xargs < .github/workflows/deps-ubuntu-24.04-mingw.txt) ) > logs/apt.log 2>&1 || { tail -n 50 logs/apt.log; exit 1; }
 export VCPKG_ROOT=${VCPKG_INSTALLATION_ROOT}
-cmake -S src -B build -DCMAKE_TOOLCHAIN_FILE="$PWD/src/cmake/toolchains/x64-mingw-vcpkg.cmake" -DVCPKG_MANIFEST_INSTALL=YES \
+bash manil/ci/vcpkg-overlays.sh > logs/overlays.log 2>&1 || { cat logs/overlays.log; exit 1; }
+cmake -S src -B build -DCMAKE_TOOLCHAIN_FILE="$PWD/src/cmake/toolchains/x64-mingw-vcpkg.cmake" -DVCPKG_MANIFEST_INSTALL=YES -DVCPKG_OVERLAY_PORTS="$PWD/vcpkg-overlays" \
   $(xargs < manil/ci/windows-cmake-args.txt) 2>&1 | tee logs/configure.log || exit 1
 cmake --build build --parallel $(nproc) 2>&1 | tee logs/build.log || exit 1
 bash manil/ci/windows-package.sh 2>&1 | tee logs/package.log || exit 1
