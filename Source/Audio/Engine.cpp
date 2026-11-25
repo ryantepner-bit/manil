@@ -88,6 +88,7 @@ TrackProcessor::TrackProcessor (int trackId, const juce::String& t) : id (trackI
 {
     if (type == "synth") synth = std::make_unique<SynthEngine>();
     if (type == "drums") drums = std::make_unique<DrumEngine>();
+    if (type == "break") breaks = std::make_unique<BreakEngine>();
     scratch.reserve (2048);
 }
 
@@ -98,6 +99,7 @@ void TrackProcessor::prepare (double sr, int block)
     inserts.prepare (sr, block);
     if (synth) synth->prepare (sr, block);
     if (drums) drums->prepare (sr, block);
+    if (breaks) breaks->prepare (sr, block);
     ch.gL.setTime (0.02f, (float) sr); ch.gR.setTime (0.02f, (float) sr);
     held.fill (0); suppressed.fill (0);
 }
@@ -300,9 +302,56 @@ void Engine::applyPadProperty (TrackProcessor& tp, const juce::ValueTree& pad, c
     if (pi >= 0) tp.drums->pad (idx).params[pi].store ((float) pad[prop]);
 }
 
+void Engine::applyBreakNode (TrackProcessor& tp, const juce::ValueTree& b, const juce::Identifier& prop)
+{
+    if (! tp.breaks) return;
+    const bool all = prop == juce::Identifier();
+    if (all || prop == IDs::file)
+    {
+        const auto path = b[IDs::file].toString();
+        std::shared_ptr<const SampleData> data;
+        if (path.isNotEmpty()) data = AudioPool::get().load (juce::File (path));
+        if (data == nullptr) data = defaultBreak();
+        tp.breaks->setSample (data);
+        if (b[IDs::slices].toString().isEmpty() && data != nullptr)
+            tp.breaks->setSlices (BreakEngine::detectSlices (*data, (float) b.getProperty (IDs::sensitivity, 0.5f)));
+    }
+    if (all || prop == IDs::slices)
+    {
+        auto p = BreakEngine::decodeSlices (b[IDs::slices].toString());
+        if (p.size() >= 2) tp.breaks->setSlices (p);
+        else if (auto d = tp.breaks->getSample()) tp.breaks->setSlices (BreakEngine::detectSlices (*d, (float) b.getProperty (IDs::sensitivity, 0.5f)));
+    }
+    if (all || prop == IDs::bpm) tp.breaks->breakBpm.store ((float) b.getProperty (IDs::bpm, 140.0f));
+    if (all || prop == IDs::sync) tp.breaks->sync.store ((bool) b.getProperty (IDs::sync, true));
+    if (all || prop == IDs::fade) tp.breaks->fadeMs.store ((float) b.getProperty (IDs::fade, 12.0f));
+    if (all || prop == IDs::tune) tp.breaks->tuneSemis.store ((float) b.getProperty (IDs::tune, 0.0f));
+    if (all || prop == IDs::gain) tp.breaks->gainDb.store ((float) b.getProperty (IDs::gain, 0.0f));
+}
+
+std::shared_ptr<const SampleData> Engine::defaultBreak()
+{
+    static std::shared_ptr<const SampleData> cached;
+    if (cached == nullptr)
+    {
+        // played from real samples when a drum library is present, else from the synthesised kit
+        std::array<std::shared_ptr<const SampleData>, 3> kit;
+        const auto files = SampleLib::buildKit ("Studio", 1);
+        for (int k = 0; k < 3; ++k) if (files[(size_t) k] != juce::File()) kit[(size_t) k] = AudioPool::get().load (files[(size_t) k]);
+        cached = BreakEngine::makeDefaultBreak (44100.0, kit);
+    }
+    return cached;
+}
+
 void Engine::valueTreePropertyChanged (juce::ValueTree& tree, const juce::Identifier& prop)
 {
     const auto type = tree.getType();
+    if (type == IDs::BREAK)
+    {
+        if (auto* tp = getTrackProcessor ((int) tree.getParent()[IDs::id]))
+            applyBreakNode (*tp, tree, prop);
+        return;
+    }
     if (type == IDs::SYNTH)
     {
         if (auto* tp = getTrackProcessor ((int) tree.getParent()[IDs::id]))
@@ -440,6 +489,7 @@ void Engine::rebuildNow()
             tp = std::make_shared<TrackProcessor> (id, type);
             tp->prepare (sampleRate, chunk);
             tp->syncFrom (track);
+            if (tp->breaks) applyBreakNode (*tp, track.getChildWithName (IDs::BREAK), {});
             if (tp->drums)
                 for (auto pad : track.getChildWithName (IDs::DRUMKIT))
                 {
@@ -812,6 +862,7 @@ void Engine::processBlock (float* L, float* R, const float* inL, const float* in
         // ---- instruments
         if (tp.synth) tp.synth->process (tL, tR, n, tp.scratch.data(), (int) tp.scratch.size(), synthOv ? tp.synthOverrides : nullptr, mods);
         if (tp.drums) tp.drums->process (tL, tR, n, tp.scratch.data(), (int) tp.scratch.size());
+        if (tp.breaks) tp.breaks->process (tL, tR, n, tp.scratch.data(), (int) tp.scratch.size(), s->tempo);
 
         // ---- audio clips
         if (tr.playing)
