@@ -1,1 +1,1 @@
-AudioFileProcessor Kicker TripleOscillator SlicerT ReverbSC Delay Monstro Watsyn Organic BitInvader Lb302 Compressor Eq Flanger MultitapEcho StereoEnhancer Bitcrush Amplifier DualFilter GranularPitchShifter
+AudioFileProcessor Kicker TripleOscillator SlicerT ReverbSC Delay Monstro Watsyn Organic BitInvader Lb302 Compressor Eq Flanger MultitapEcho StereoEnhancer Bitcrush Amplifier DualFilter GranularPitchShifter MandelCloud MandelSpectral MandelResonator

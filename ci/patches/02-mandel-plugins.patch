@@ -1,0 +1,14 @@
+diff --git a/cmake/modules/PluginList.cmake b/cmake/modules/PluginList.cmake
+index 7d0afb5..227246a 100644
+--- a/cmake/modules/PluginList.cmake
++++ b/cmake/modules/PluginList.cmake
+@@ -24,6 +24,9 @@ ENDIF()
+ SET(LMMS_PLUGIN_LIST
+ 	${MINIMAL_LIST}
+ 	Amplifier
++	MandelCloud
++	MandelResonator
++	MandelSpectral
+ 	BassBooster
+ 	BitInvader
+ 	Bitcrush
