@@ -159,9 +159,36 @@ public:
 	std::atomic<float> currentEscape { 0 }, currentChaos { 0 }, currentBoundary { 0 }, currentEntropy { 0 },
 		currentRoughness { 0 }, currentDrumSimilarity { 0 };
 	std::atomic<int> currentPeriod { 0 }, currentKeyRoot { 9 }, currentScale { 1 }, currentBars { 4 };
+	// for MANDELBROT's effects (lock free, updated every tick): the sounding chord and key as
+	// pitch-class bit masks (bit 0 = C), the chord's bass note and this bar's fractal readings
+	std::atomic<int> currentChordMask { 0 }, currentScaleMask { 0xfff }, currentChordBass { 45 };
+	std::atomic<float> barEscape { 0 }, barChaos { 0 }, barBoundary { 0 }, barEntropy { 0 };
 
 	//! Builds a phrase plan now (also used by tests and by "render to clip")
 	void buildNextPlan();
+
+	//! Audio thread, every tick: publishes the sounding chord, key and this bar's readings for the
+	//! effects (MandelCloud, MandelResonator, MandelSpectral read them lock free)
+	void publishCurrentBar()
+	{
+		if (!m_running || !m_plan) { return; }
+		const BarInfo& b = m_plan->barAt(m_tickInPhrase);
+		const Key& key = m_plan->key;
+		int chord = 0;
+		for (int i = 0; i < b.chordSize && i < static_cast<int>(b.chordDegs.size()); ++i)
+		{
+			chord |= 1 << (((key.pitch(b.chordDegs[static_cast<std::size_t>(i)], 4) % 12) + 12) % 12);
+		}
+		int sc = 0;
+		for (int i = 0; i < key.numDegs; ++i) { sc |= 1 << ((key.root + key.degs[static_cast<std::size_t>(i)]) % 12); }
+		currentChordMask.store(chord, std::memory_order_relaxed);
+		currentScaleMask.store(sc, std::memory_order_relaxed);
+		currentChordBass.store(key.pitch(b.chordRoot, 2), std::memory_order_relaxed);
+		barEscape.store(static_cast<float>(b.feat.escape), std::memory_order_relaxed);
+		barChaos.store(static_cast<float>(b.feat.chaos), std::memory_order_relaxed);
+		barBoundary.store(static_cast<float>(b.feat.boundary), std::memory_order_relaxed);
+		barEntropy.store(static_cast<float>(b.feat.entropy), std::memory_order_relaxed);
+	}
 
 private:
 	void walk(int bars);

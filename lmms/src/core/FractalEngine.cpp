@@ -163,6 +163,7 @@ void FractalEngine::processTick(int songTick)
 	}
 	if (!m_conductor.running()) { m_conductor.start(songTick); }
 	else { m_conductor.tick(); }
+	m_conductor.publishCurrentBar();
 }
 
 void FractalEngine::transportStopped()
