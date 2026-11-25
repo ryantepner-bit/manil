@@ -175,13 +175,13 @@ def texture_sound():
 DRUMS = "drums-cc0/"
 
 
-def project(style, tracks, bpm, root=9, scale=1):
+def project(style, tracks, bpm, root=9, scale=1, master=100):
     eng = attrs(dict(enabled=1, style=STYLES[style], root=root, scale=scale, fractalkey=0, drift=0.35 if style != "Ambient" else 0.25,
                      zoom=0.02, complexity=0.5 if style != "Ambient" else 0.35, fractalcontrol=0.6, swing=0 if style != "Breakbeat" else 0.05,
                      novelty=0.8, noveltymode=1, chordspeed=0, phrasebars=0))
     return ('<?xml version="1.0"?>\n<!DOCTYPE lmms-project>\n'
             '<lmms-project version="1.0" creator="LMMS" creatorversion="1.2.0" type="song">\n'
-            f'  <head timesig_numerator="4" mastervol="100" timesig_denominator="4" bpm="{bpm}" masterpitch="0"/>\n'
+            f'  <head timesig_numerator="4" mastervol="{master}" timesig_denominator="4" bpm="{bpm}" masterpitch="0"/>\n'
             '  <song>\n'
             '    <trackcontainer width="600" x="5" y="5" maximized="0" height="300" visible="1" type="song" minimized="0">\n'
             + "\n".join("      " + t for t in tracks) + "\n"
@@ -210,7 +210,8 @@ def idm(length=0):
         track("Lead", l, "Lead", vol=60, eld=le, effects=[delay(0.25, 0.375, 0.3), reverb(0.25, 0.8)]),
         track("Arp", p, "Arp", vol=40, pan=15, eld=pe, effects=[delay(0.3, 0.1875, 0.4), cloud(0.2, 60, 8, 12, 0, 0.3, 0.9)]),
     ]
-    return project("IDM", t, 128)
+    # master at 50 %: the first CI render of 13 full-level tracks clipped 4.5 % of samples
+    return project("IDM", t, 128, master=50)
 
 
 def ambient(length=0):
@@ -246,7 +247,7 @@ def breakbeat(length=0):
         track("Lead", l, "Lead", vol=55, density=0.4, eld=le, effects=[delay(0.3, 0.375, 0.35), reverb(0.3, 0.85)]),
         track("Arp", p, "Arp", vol=35, eld=pe, effects=[delay(0.3, 0.1875, 0.45)]),
     ]
-    return project("Breakbeat", t, 170, root=9, scale=5)
+    return project("Breakbeat", t, 170, root=9, scale=5, master=50)  # clipped 3.5 % at 100
 
 
 def main():
