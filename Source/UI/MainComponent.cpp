@@ -43,9 +43,8 @@ MainComponent::MainComponent (Engine& e, juce::ApplicationProperties& p)
         });
     };
 
-    // restore the last project, else start with the generative demo
-    const auto last = props.getUserSettings()->getValue ("lastProject");
-    if (last.isEmpty() || ! openProject (juce::File (last))) newProject (true);
+    // always start in a fresh live project: open it and the fractal plays (File > Open for saved work)
+    newProject (true);
     setSize (1500, 920);
     // open it and it plays: live mode starts straight away
     if ((bool) Model::liveNode (state.project).getProperty (IDs::liveOn, false)) engine.play();
@@ -189,7 +188,7 @@ bool MainComponent::hasUnsavedChanges() const { return dirty.modified; }
 
 juce::String MainComponent::windowTitle() const
 {
-    return "MANDELBROT  -  " + (state.projectFile != juce::File() ? state.projectFile.getFileNameWithoutExtension() : juce::String ("Untitled")) + (dirty.modified ? " *" : "");
+    return "MANDELBROT " + juce::String (JUCE_APPLICATION_VERSION_STRING) + "  -  " + (state.projectFile != juce::File() ? state.projectFile.getFileNameWithoutExtension() : juce::String ("Untitled")) + (dirty.modified ? " *" : "");
 }
 
 void MainComponent::timerCallback()
