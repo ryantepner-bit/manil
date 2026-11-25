@@ -1,4 +1,5 @@
 #include "ProjectModel.h"
+#include "../Live/LiveSequencer.h"
 
 namespace Model
 {
@@ -123,9 +124,10 @@ namespace Model
         p.setProperty (IDs::tempo, 128.0, nullptr);
         p.setProperty (IDs::tsNum, 4, nullptr);
         p.setProperty (IDs::tsDen, 4, nullptr);
-        p.setProperty (IDs::loopOn, true, nullptr);
+        p.setProperty (IDs::loopOn, false, nullptr);     // timeline selection (FL style), off by default
         p.setProperty (IDs::loopStart, 0.0, nullptr);
-        p.setProperty (IDs::loopEnd, 16.0, nullptr);
+        p.setProperty (IDs::loopEnd, 0.0, nullptr);
+        p.setProperty (IDs::songMode, true, nullptr);
         p.setProperty (IDs::nextId, 1, nullptr);
         p.setProperty (IDs::metronome, false, nullptr);
         p.appendChild (juce::ValueTree (IDs::TRACKS), nullptr);
@@ -137,9 +139,9 @@ namespace Model
         p.appendChild (m, nullptr);
         p.appendChild (juce::ValueTree (IDs::GENERATORS), nullptr);
         juce::ValueTree fr (IDs::FRACTAL);
-        fr.setProperty (IDs::cx, -0.743643887, nullptr);
-        fr.setProperty (IDs::cy, 0.131825904, nullptr);
-        fr.setProperty (IDs::scaleF, 0.02, nullptr);
+        fr.setProperty (IDs::cx, -0.745, nullptr);
+        fr.setProperty (IDs::cy, 0.125, nullptr);
+        fr.setProperty (IDs::scaleF, 0.12, nullptr);
         fr.setProperty (IDs::iters, 400, nullptr);
         fr.setProperty (IDs::palette, 0, nullptr);
         fr.setProperty (IDs::probeX, -0.7436, nullptr);
@@ -147,7 +149,133 @@ namespace Model
         p.appendChild (fr, nullptr);
         p.appendChild (juce::ValueTree (IDs::BOOKMARKS), nullptr);
         p.appendChild (juce::ValueTree (IDs::PATHS), nullptr);
+        auto live = Live::createLiveNode();
+        live.setProperty (IDs::liveOn, false, nullptr);
+        p.appendChild (live, nullptr);
         return p;
+    }
+
+    juce::ValueTree liveNode (juce::ValueTree project)
+    {
+        auto l = project.getChildWithName (IDs::LIVE);
+        if (! l.isValid())
+        {
+            l = Live::createLiveNode();
+            l.setProperty (IDs::liveOn, false, nullptr);
+            project.appendChild (l, nullptr);
+        }
+        return l;
+    }
+
+    juce::StringArray synthPresetNames() { return { "Init", "Bass", "Acid Bass", "Lead", "Soft Pad", "Glass Pad", "Pluck", "Keys", "Bell", "Grain Cloud" }; }
+
+    void applySynthPreset (juce::ValueTree s, const juce::String& preset, juce::UndoManager* um)
+    {
+        // start from defaults with an empty mod matrix, then apply the preset
+        for (auto& d : SynthP::defs()) s.setProperty (d.id, d.defV, um);
+        for (int i = 0; i < 6; ++i)
+        {
+            s.setProperty ("m" + juce::String (i) + "src", 0.0f, um);
+            s.setProperty ("m" + juce::String (i) + "dst", 0.0f, um);
+            s.setProperty ("m" + juce::String (i) + "amt", 0.0f, um);
+        }
+        auto set = [&] (const char* id, float v) { s.setProperty (id, v, um); };
+        auto mod = [&] (int slot, int src, int dst, float amt)
+        {
+            s.setProperty ("m" + juce::String (slot) + "src", (float) src, um);
+            s.setProperty ("m" + juce::String (slot) + "dst", (float) dst, um);
+            s.setProperty ("m" + juce::String (slot) + "amt", amt, um);
+        };
+        using namespace SynthP;
+        set ("osc2Semi", 0.0f); set ("osc2Detune", 7.0f); set ("unisonDetune", 0.0f);
+        if (preset == "Bass")
+        {
+            set ("engine", 0); set ("osc1Wave", 0); set ("osc2Wave", 1); set ("oscMix", 0.3f); set ("subLevel", 0.7f);
+            set ("cutoff", 420.0f); set ("reso", 0.18f); set ("filterEnv", 0.45f); set ("keyTrack", 0.4f); set ("drive", 0.25f);
+            set ("ampA", 0.002f); set ("ampD", 0.3f); set ("ampS", 0.65f); set ("ampR", 0.08f);
+            set ("modA", 0.001f); set ("modD", 0.18f); set ("modS", 0.0f); set ("modR", 0.1f);
+            set ("gain", -4.0f);
+        }
+        else if (preset == "Acid Bass")
+        {
+            set ("engine", 0); set ("osc1Wave", 0); set ("oscMix", 0.0f); set ("subLevel", 0.3f);
+            set ("cutoff", 300.0f); set ("reso", 0.78f); set ("filterEnv", 0.75f); set ("keyTrack", 0.3f); set ("drive", 0.45f);
+            set ("ampA", 0.002f); set ("ampD", 0.25f); set ("ampS", 0.5f); set ("ampR", 0.06f);
+            set ("modA", 0.001f); set ("modD", 0.16f); set ("modS", 0.0f); set ("modR", 0.08f);
+            set ("glide", 0.04f); set ("gain", -7.0f);
+            mod (0, srcFractalA, dstCutoff, 0.25f);
+        }
+        else if (preset == "Lead")
+        {
+            set ("engine", 0); set ("osc1Wave", 0); set ("osc2Wave", 0); set ("oscMix", 0.5f); set ("osc2Detune", 12.0f); set ("unisonDetune", 0.35f);
+            set ("subLevel", 0.0f); set ("cutoff", 2600.0f); set ("reso", 0.22f); set ("filterEnv", 0.35f); set ("keyTrack", 0.5f);
+            set ("ampA", 0.004f); set ("ampD", 0.35f); set ("ampS", 0.55f); set ("ampR", 0.25f);
+            set ("modA", 0.002f); set ("modD", 0.3f); set ("modS", 0.1f); set ("modR", 0.3f);
+            set ("lfo1Rate", 5.2f); set ("gain", -9.0f);
+            mod (0, srcLfo1, dstPitch, 0.006f);
+            mod (1, srcVelocity, dstCutoff, 0.25f);
+        }
+        else if (preset == "Soft Pad")
+        {
+            set ("engine", 0); set ("osc1Wave", 0); set ("osc2Wave", 2); set ("oscMix", 0.45f); set ("osc2Detune", 9.0f); set ("unisonDetune", 0.6f);
+            set ("subLevel", 0.0f); set ("cutoff", 1500.0f); set ("reso", 0.1f); set ("filterEnv", 0.15f); set ("keyTrack", 0.3f);
+            set ("ampA", 0.7f); set ("ampD", 1.0f); set ("ampS", 0.8f); set ("ampR", 2.2f);
+            set ("modA", 1.2f); set ("modD", 1.5f); set ("modS", 0.5f); set ("modR", 2.0f);
+            set ("lfo1Rate", 0.25f); set ("gain", -14.0f);
+            mod (0, srcLfo1, dstCutoff, 0.12f);
+        }
+        else if (preset == "Glass Pad")
+        {
+            set ("engine", 2); set ("wtPos", 0.25f); set ("subLevel", 0.0f);
+            set ("cutoff", 4200.0f); set ("reso", 0.12f); set ("filterEnv", 0.1f);
+            set ("ampA", 0.9f); set ("ampD", 1.0f); set ("ampS", 0.8f); set ("ampR", 2.6f);
+            set ("lfo1Rate", 0.15f); set ("gain", -15.0f);
+            mod (0, srcLfo1, dstWtPos, 0.25f);
+            mod (1, srcFractalA, dstWtPos, 0.2f);
+        }
+        else if (preset == "Pluck")
+        {
+            set ("engine", 1); set ("fmRatio", 2.0f); set ("fmIndex", 1.6f); set ("fmFeedback", 0.05f); set ("fmCarrier", 1.0f); set ("subLevel", 0.0f);
+            set ("cutoff", 5000.0f); set ("reso", 0.1f); set ("filterEnv", 0.2f);
+            set ("ampA", 0.001f); set ("ampD", 0.22f); set ("ampS", 0.0f); set ("ampR", 0.18f);
+            set ("modA", 0.001f); set ("modD", 0.12f); set ("modS", 0.0f); set ("modR", 0.1f);
+            set ("gain", -9.0f);
+            mod (0, srcModEnv, dstFmIndex, 0.35f);
+        }
+        else if (preset == "Keys")
+        {
+            set ("engine", 1); set ("fmRatio", 1.0f); set ("fmIndex", 1.2f); set ("fmFeedback", 0.0f); set ("fmCarrier", 1.0f); set ("subLevel", 0.0f);
+            set ("cutoff", 6000.0f); set ("reso", 0.05f); set ("filterEnv", 0.0f);
+            set ("ampA", 0.002f); set ("ampD", 1.2f); set ("ampS", 0.25f); set ("ampR", 0.5f);
+            set ("modA", 0.001f); set ("modD", 0.6f); set ("modS", 0.1f); set ("modR", 0.4f);
+            set ("gain", -10.0f);
+            mod (0, srcModEnv, dstFmIndex, 0.2f);
+            mod (1, srcVelocity, dstFmIndex, 0.15f);
+        }
+        else if (preset == "Bell")
+        {
+            set ("engine", 1); set ("fmRatio", 3.5f); set ("fmIndex", 2.5f); set ("fmFeedback", 0.0f); set ("fmCarrier", 1.0f); set ("subLevel", 0.0f);
+            set ("cutoff", 9000.0f); set ("reso", 0.0f); set ("filterEnv", 0.0f);
+            set ("ampA", 0.001f); set ("ampD", 1.8f); set ("ampS", 0.0f); set ("ampR", 1.2f);
+            set ("modA", 0.001f); set ("modD", 1.0f); set ("modS", 0.0f); set ("modR", 0.8f);
+            set ("gain", -12.0f);
+            mod (0, srcModEnv, dstFmIndex, 0.3f);
+        }
+        else if (preset == "Grain Cloud")
+        {
+            set ("engine", 3); set ("grainSize", 120.0f); set ("grainDensity", 24.0f); set ("grainPos", 0.4f); set ("grainSpray", 0.35f);
+            set ("cutoff", 5000.0f); set ("reso", 0.1f); set ("filterEnv", 0.0f);
+            set ("ampA", 0.4f); set ("ampD", 0.8f); set ("ampS", 0.7f); set ("ampR", 1.5f);
+            set ("lfo1Rate", 0.2f); set ("gain", -10.0f);
+            mod (0, srcLfo1, dstGrainPos, 0.3f);
+        }
+        else // Init: clean saw
+        {
+            set ("engine", 0); set ("osc1Wave", 0); set ("oscMix", 0.0f); set ("subLevel", 0.0f);
+            set ("cutoff", 3000.0f); set ("reso", 0.1f); set ("filterEnv", 0.2f);
+            set ("gain", -10.0f);
+        }
+        s.setProperty ("preset", preset, um);
     }
 
     juce::ValueTree createDefaultProject()
@@ -164,25 +292,32 @@ namespace Model
         for (int k = 0; k < 4; ++k) dins.setProperty (juce::Identifier ("p" + juce::String (k)), FxP::defaultValue (FxP::Delay, k), nullptr);
         dins.setProperty (IDs::p3, 1.0f, nullptr);
 
-        auto drums = addTrack (p, "drums", "Breaks", nullptr);
-        drums.setProperty (IDs::volume, -4.0f, nullptr);
+        // one track per live part: open the app and it plays
+        auto drums = addTrack (p, "drums", "Drums", nullptr);
+        drums.setProperty (IDs::volume, -5.0f, nullptr);
+        drums.setProperty (IDs::livePart, (int) Live::Drums, nullptr);
         auto bass = addTrack (p, "synth", "Bass", nullptr);
-        auto bs = bass.getChildWithName (IDs::SYNTH);
-        bs.setProperty ("cutoff", 600.0f, nullptr);
-        bs.setProperty ("subLevel", 0.6f, nullptr);
-        bs.setProperty ("ampR", 0.15f, nullptr);
+        applySynthPreset (bass.getChildWithName (IDs::SYNTH), "Bass", nullptr);
+        bass.setProperty (IDs::livePart, (int) Live::Bass, nullptr);
+        bass.setProperty (IDs::volume, -5.0f, nullptr);
+        auto chords = addTrack (p, "synth", "Chords", nullptr);
+        applySynthPreset (chords.getChildWithName (IDs::SYNTH), "Soft Pad", nullptr);
+        chords.setProperty (IDs::livePart, (int) Live::Chords, nullptr);
+        chords.setProperty (IDs::send0, 0.4f, nullptr);
+        chords.setProperty (IDs::volume, -6.0f, nullptr);
         auto lead = addTrack (p, "synth", "Lead", nullptr);
-        auto ls = lead.getChildWithName (IDs::SYNTH);
-        ls.setProperty ("engine", 1, nullptr);
-        lead.setProperty (IDs::send1, 0.3f, nullptr);
-        auto pad = addTrack (p, "synth", "Pad", nullptr);
-        auto ps = pad.getChildWithName (IDs::SYNTH);
-        ps.setProperty ("engine", 2, nullptr);
-        ps.setProperty ("ampA", 0.6f, nullptr);
-        ps.setProperty ("ampR", 2.0f, nullptr);
-        pad.setProperty (IDs::send0, 0.45f, nullptr);
-        pad.setProperty (IDs::volume, -10.0f, nullptr);
+        applySynthPreset (lead.getChildWithName (IDs::SYNTH), "Lead", nullptr);
+        lead.setProperty (IDs::livePart, (int) Live::Lead, nullptr);
+        lead.setProperty (IDs::send1, 0.25f, nullptr);
+        lead.setProperty (IDs::send0, 0.15f, nullptr);
+        lead.setProperty (IDs::volume, -7.0f, nullptr);
+        auto arp = addTrack (p, "synth", "Arp", nullptr);
+        applySynthPreset (arp.getChildWithName (IDs::SYNTH), "Pluck", nullptr);
+        arp.setProperty (IDs::livePart, (int) Live::Arp, nullptr);
+        arp.setProperty (IDs::send1, 0.3f, nullptr);
+        arp.setProperty (IDs::volume, -9.0f, nullptr);
         addTrack (p, "audio", "Audio 1", nullptr);
+        liveNode (p).setProperty (IDs::liveOn, true, nullptr);
         return p;
     }
 
@@ -250,6 +385,25 @@ namespace Model
     }
 
     juce::ValueTree trackOfClip (juce::ValueTree clip) { return clip.getParent().getParent(); }
+
+    double freeSpot (const juce::ValueTree& track, double start, double length, double bpb)
+    {
+        bool moved = true;
+        for (int guard = 0; moved && guard < 1024; ++guard)
+        {
+            moved = false;
+            for (auto c : track.getChildWithName (IDs::CLIPS))
+            {
+                const double cs = c[IDs::start], ce = cs + (double) c[IDs::length];
+                if (start < ce - 1e-6 && start + length > cs + 1e-6)
+                {
+                    start = std::ceil (ce / bpb - 1e-9) * bpb;
+                    moved = true;
+                }
+            }
+        }
+        return start;
+    }
 
     // ------------------------------------------------------------------ notes
     NoteData readNote (const juce::ValueTree& n)
@@ -377,6 +531,8 @@ namespace Model
             v.appendChild (createEmptyProject().getChildWithName (IDs::FRACTAL).createCopy(), nullptr);
         if (! v.getChildWithName (IDs::MASTER).isValid())
             v.appendChild (createEmptyProject().getChildWithName (IDs::MASTER).createCopy(), nullptr);
+        liveNode (v);
+        if (! v.hasProperty (IDs::songMode)) v.setProperty (IDs::songMode, true, nullptr);
         return v;
     }
 

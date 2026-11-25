@@ -47,12 +47,21 @@ namespace Model
     juce::ValueTree createPadNode (int index);
     juce::Colour trackColour (int index);
 
+    // synth presets (sound design starting points that the live parts use)
+    juce::StringArray synthPresetNames();
+    void applySynthPreset (juce::ValueTree synthNode, const juce::String& preset, juce::UndoManager* um);
+
+    /** Ensures the project has a LIVE node (older files: created with live off). */
+    juce::ValueTree liveNode (juce::ValueTree project);
+
     // clips
     juce::ValueTree addMidiClip (juce::ValueTree track, double start, double length, juce::UndoManager* um);
     juce::ValueTree addPatternClip (juce::ValueTree track, double start, double length, juce::UndoManager* um);
     juce::ValueTree addAudioClip (juce::ValueTree track, const juce::File& f, double start, double lengthBeats, juce::UndoManager* um);
     juce::ValueTree duplicateClip (juce::ValueTree clip, double newStart, juce::UndoManager* um);
     juce::ValueTree trackOfClip (juce::ValueTree clip);
+    /** First start >= 'start' (moved by whole bars) where a clip of 'length' does not overlap another clip. */
+    double freeSpot (const juce::ValueTree& track, double start, double length, double beatsPerBar);
 
     // notes
     juce::ValueTree addNote (juce::ValueTree clip, const NoteData& n, juce::UndoManager* um);
