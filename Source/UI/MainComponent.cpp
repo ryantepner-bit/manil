@@ -3,7 +3,7 @@
 
 MainComponent::MainComponent (Engine& e, juce::ApplicationProperties& p)
     : engine (e), props (p), state (e), composer (state), transport (state),
-      arrangement (state, composer), fractal (state, composer), pianoRoll (state), generators (state, composer),
+      livePage (state, composer), arrangement (state, composer), pianoRoll (state), generators (state, composer),
       synth (state, composer), drums (state, composer), mixer (state), audioEditor (state)
 {
     juce::LookAndFeel::setDefaultLookAndFeel (&lnf);
@@ -14,8 +14,8 @@ MainComponent::MainComponent (Engine& e, juce::ApplicationProperties& p)
     tabs.setTabBarDepth (36);
     tabs.setOutline (0);
     const auto bg = Theme::bg;
+    tabs.addTab ("Live", bg, &livePage, false);
     tabs.addTab ("Arrangement", bg, &arrangement, false);
-    tabs.addTab ("Fractal Explorer", bg, &fractal, false);
     tabs.addTab ("Piano Roll", bg, &pianoRoll, false);
     tabs.addTab ("Generative", bg, &generators, false);
     tabs.addTab ("Synthesizer", bg, &synth, false);
@@ -47,6 +47,8 @@ MainComponent::MainComponent (Engine& e, juce::ApplicationProperties& p)
     const auto last = props.getUserSettings()->getValue ("lastProject");
     if (last.isEmpty() || ! openProject (juce::File (last))) newProject (true);
     setSize (1500, 920);
+    // open it and it plays: live mode starts straight away
+    if ((bool) Model::liveNode (state.project).getProperty (IDs::liveOn, false)) engine.play();
     startTimerHz (4);
 }
 
@@ -83,8 +85,8 @@ void MainComponent::setProject (juce::ValueTree p)
     engine.setPosition (0.0);
     composer.setProject (p);
     transport.setProject (p);
+    livePage.setProject (p);
     arrangement.setProject (p);
-    fractal.setProject (p);
     pianoRoll.setProject (p);
     generators.setProject (p);
     synth.setProject (p);
@@ -101,23 +103,17 @@ void MainComponent::setProject (juce::ValueTree p)
 
 void MainComponent::buildDemoContent()
 {
-    // one generator per instrument track, generated from the default seahorse-valley probe
+    // a generator per instrument track (Generative workspace); the music itself comes from Live mode
     auto p = state.project;
-    const int roles[] = { Gen::Bass, Gen::Melody, Gen::Chords };
+    const int roles[] = { Gen::Bass, Gen::Chords, Gen::Melody, Gen::Arp };
     int si = 0;
     for (auto t : Model::tracks (p))
     {
         const auto type = t[IDs::type].toString();
         if (type == "audio") continue;
-        auto g = composer.addGenerator (t[IDs::id], type == "drums" ? Gen::Breaks : roles[si++ % 3]);
+        auto g = composer.addGenerator (t[IDs::id], type == "drums" ? Gen::Breaks : roles[si++ % 4]);
         g.setProperty (IDs::seed, 1000 + si * 17, nullptr);
-        if (type == "drums") g.setProperty (IDs::complexity, 0.6f, nullptr);
     }
-    composer.generateAll (0.0);
-    // second phrase: evolve every generator for a 4-bar continuation
-    const double phrase = 4 * state.beatsPerBar();
-    for (auto g : p.getChildWithName (IDs::GENERATORS)) composer.generate (g, phrase, {}, true);
-    p.setProperty (IDs::loopEnd, phrase * 2, nullptr);
     state.undo.clearUndoHistory();
     dirty.modified = false;
 }
@@ -138,6 +134,7 @@ void MainComponent::newProject (bool demo)
     else buildDemoContent();
     dirty.modified = false;
     if (onTitleChanged) onTitleChanged (windowTitle());
+    if ((bool) Model::liveNode (state.project).getProperty (IDs::liveOn, false)) engine.play();
 }
 
 bool MainComponent::openProject (const juce::File& f)
@@ -345,7 +342,7 @@ void MainComponent::getCommandInfo (juce::CommandID id, juce::ApplicationCommand
         case cmdPlay: info.setInfo ("Play / Pause", {}, "Transport", 0); info.addDefaultKeypress (KP::spaceKey, 0); break;
         case cmdStop: info.setInfo ("Stop / Return", {}, "Transport", 0); info.addDefaultKeypress (KP::returnKey, 0); break;
         case cmdRecord: info.setInfo ("Record enable", {}, "Transport", 0); info.setTicked (engine.isRecordEnabled()); break;
-        case cmdLoop: info.setInfo ("Loop on/off", {}, "Transport", 0); info.setTicked ((bool) state.project.getProperty (IDs::loopOn, false)); info.addDefaultKeypress ('l', cmd); break;
+        case cmdLoop: info.setInfo ("Pattern / Song mode", "PAT loops the selected clip, SONG plays the whole arrangement", "Transport", 0); info.setTicked (! (bool) state.project.getProperty (IDs::songMode, true)); info.addDefaultKeypress ('l', 0); break;
         case cmdHome: info.setInfo ("Go to start", {}, "Transport", 0); info.addDefaultKeypress (KP::homeKey, 0); break;
         case cmdAddSynth: info.setInfo ("Add synth track", {}, "Track", 0); info.addDefaultKeypress ('t', cmd); break;
         case cmdAddDrums: info.setInfo ("Add drum track", {}, "Track", 0); break;
@@ -400,7 +397,7 @@ bool MainComponent::perform (const InvocationInfo& info)
         case cmdPlay: engine.togglePlay(); break;
         case cmdStop: engine.stop(); break;
         case cmdRecord: engine.setRecordEnabled (! engine.isRecordEnabled()); break;
-        case cmdLoop: state.project.setProperty (IDs::loopOn, ! (bool) state.project.getProperty (IDs::loopOn, false), nullptr); break;
+        case cmdLoop: state.project.setProperty (IDs::songMode, ! (bool) state.project.getProperty (IDs::songMode, true), nullptr); break;
         case cmdHome: engine.setPosition (0.0); break;
         case cmdAddSynth: arrangement.addTrack ("synth"); break;
         case cmdAddDrums: arrangement.addTrack ("drums"); break;
@@ -410,14 +407,15 @@ bool MainComponent::perform (const InvocationInfo& info)
         case cmdGenerateAll: composer.generateAll (std::floor (engine.getPosition() / state.beatsPerBar()) * state.beatsPerBar()); break;
         case cmdShortcuts:
             juce::AlertWindow::showAsync (juce::MessageBoxOptions().withTitle ("Shortcuts").withButton ("OK", 1).withMessage (
-                "Space  play/pause      Enter  stop (twice: return)      Home  start\n"
+                "Space  play / stop (returns to where you started)      L  PAT / SONG mode      Home  start\n"
                 "Ctrl+Z / Ctrl+Y  undo / redo      Ctrl+S  save      Ctrl+R  export audio\n"
                 "F1..F8  workspaces      Ctrl+G  generate all at playhead\n\n"
+                "Live: click the fractal to move the probe, wheel zoom, drag pan, Capture keeps the last bars\n"
                 "Arrangement: drag clips (Ctrl-drag copies), drag right edge to resize, double-click empty to create,\n"
-                "  Ctrl+D duplicate, Ctrl+E split, Delete, drag on ruler = loop, Ctrl+wheel zoom, drop WAV files\n"
+                "  Ctrl+D duplicate, Ctrl+E split, Delete, drag on ruler = loop selection (click ruler clears), Ctrl+wheel zoom\n"
                 "Piano roll: click to draw, drag to move/resize, Shift/Ctrl-drag select, arrows transpose, Q quantize,\n"
                 "  Alt/right-click delete, Ctrl+C/V, Ctrl+wheel zoom, Alt+wheel row height\n"
-                "Fractal: wheel zoom, drag pan, click = probe, Shift-drag = region, Ctrl+Shift-drag = zoom to region"), nullptr);
+                "Fractal: Shift-drag = analyse region, Ctrl+Shift-drag = zoom to region"), nullptr);
             break;
         default:
             if (info.commandID >= cmdWorkspace1 && info.commandID <= cmdWorkspace8) tabs.setCurrentTabIndex (info.commandID - cmdWorkspace1);
@@ -462,7 +460,7 @@ void MainComponent::captureScreenshots (const juce::File& dir)
             found:;
         }
         // let async renders / timers settle
-        const auto until = juce::Time::getMillisecondCounter() + (i == AppState::Fractal ? 2500u : 600u);
+        const auto until = juce::Time::getMillisecondCounter() + (i == AppState::Live ? 3000u : 600u);
         while (juce::Time::getMillisecondCounter() < until)
             juce::MessageManager::getInstance()->runDispatchLoopUntil (50);
         auto img = createComponentSnapshot (getLocalBounds(), true, 1.0f);
