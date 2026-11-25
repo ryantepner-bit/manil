@@ -1,5 +1,6 @@
 #include "ProjectModel.h"
 #include "../Live/LiveSequencer.h"
+#include "../Audio/SampleLibrary.h"
 
 namespace Model
 {
@@ -96,6 +97,7 @@ namespace Model
         t.appendChild (juce::ValueTree (IDs::AUTOMATION), nullptr);
         if (type == "synth") t.appendChild (createSynthNode(), nullptr);
         if (type == "drums") t.appendChild (createDrumKitNode(), nullptr);
+        if (type == "break") t.appendChild (createBreakNode(), nullptr);
         ts.appendChild (t, um);
         return t;
     }
@@ -164,10 +166,110 @@ namespace Model
             l.setProperty (IDs::liveOn, false, nullptr);
             project.appendChild (l, nullptr);
         }
+        // files from before a part existed: add it (switched off) so the UI and the sequencer agree
+        for (int part = 1; part < Live::NumParts; ++part)
+            if (! l.getChildWithProperty (IDs::id, part).isValid())
+            {
+                auto fresh = Live::createLiveNode().getChildWithProperty (IDs::id, part).createCopy();
+                fresh.setProperty (IDs::liveOn, false, nullptr);
+                l.appendChild (fresh, nullptr);
+            }
         return l;
     }
 
-    juce::StringArray synthPresetNames() { return { "Init", "Bass", "Acid Bass", "Lead", "Soft Pad", "Glass Pad", "Pluck", "Keys", "Bell", "Grain Cloud" }; }
+    juce::ValueTree createBreakNode()
+    {
+        juce::ValueTree b (IDs::BREAK);
+        b.setProperty (IDs::file, "", nullptr);          // empty = the built-in break
+        b.setProperty (IDs::bpm, 140.0f, nullptr);
+        b.setProperty (IDs::slices, "", nullptr);        // empty = detect transients
+        b.setProperty (IDs::sync, true, nullptr);
+        b.setProperty (IDs::fade, 12.0f, nullptr);
+        b.setProperty (IDs::tune, 0.0f, nullptr);
+        b.setProperty (IDs::gain, 0.0f, nullptr);
+        b.setProperty (IDs::sensitivity, 0.5f, nullptr);
+        return b;
+    }
+
+    void applyKit (juce::ValueTree track, const juce::String& kit, juce::uint32 seed, juce::UndoManager* um)
+    {
+        auto kitNode = track.getChildWithName (IDs::DRUMKIT);
+        if (! kitNode.isValid()) return;
+        static const char* synthNames[] = { "Kick", "Snare", "Closed Hat", "Open Hat", "Clap", "Low Tom", "Hi Tom", "Rim", "Glitch", "Zap", "Noise", "Sub" };
+        const auto files = SampleLib::buildKit (kit, seed);
+        for (int i = 0; i < kitNode.getNumChildren() && i < 12; ++i)
+        {
+            auto pad = kitNode.getChild (i);
+            const auto& f = files[(size_t) i];
+            pad.setProperty ("sliceStart", 0.0f, um);
+            pad.setProperty ("sliceEnd", 1.0f, um);
+            if (f == juce::File())
+            {
+                pad.setProperty (IDs::sample, "", um);
+                pad.setProperty (IDs::synthKind, i, um);
+                pad.setProperty (IDs::name, synthNames[i], um);
+            }
+            else
+            {
+                pad.setProperty (IDs::sample, f.getFullPathName(), um);
+                pad.setProperty (IDs::name, f.getFileNameWithoutExtension().substring (0, 16), um);
+                pad.setProperty ("decay", juce::jmax (0.6f, (float) pad.getProperty ("decay", 1.0f)), um);
+            }
+        }
+        track.setProperty (IDs::kit, kit, um);
+    }
+
+    juce::StringArray liveStyleNames() { return { "IDM", "Ambient", "Breakbeat" }; }
+
+    void applySpace (juce::ValueTree project, float space, juce::UndoManager* um)
+    {
+        static const float base[] = { 0.0f, 0.08f, 0.0f, 0.4f, 0.22f, 0.3f, 0.1f };
+        for (auto t : tracks (project))
+        {
+            const int part = (int) t.getProperty (IDs::livePart, 0);
+            if (part <= 0 || part >= Live::NumParts) continue;
+            t.setProperty (IDs::send0, juce::jlimit (0.0f, 1.0f, base[part] * space * 2.2f), um);
+        }
+        liveNode (project).setProperty (IDs::space, space, um);
+    }
+
+    void applyLiveStyle (juce::ValueTree project, int style, juce::UndoManager* um)
+    {
+        auto live = liveNode (project);
+        struct PartCfg { bool on; float density; int octave; const char* preset; };
+        // order: -, Drums, Bass, Chords, Lead, Arp, Break
+        static const PartCfg idm[] = { {}, { true, 0.6f, 0, nullptr }, { true, 0.5f, 2, "Bass" }, { true, 0.5f, 4, "Soft Pad" }, { true, 0.55f, 5, "Lead" }, { true, 0.5f, 5, "Pluck" }, { false, 0.5f, 0, nullptr } };
+        static const PartCfg ambient[] = { {}, { true, 0.2f, 0, nullptr }, { true, 0.35f, 2, "Drone" }, { true, 0.5f, 4, "Glass Pad" }, { true, 0.35f, 5, "Air Lead" }, { true, 0.45f, 6, "Bell" }, { false, 0.3f, 0, nullptr } };
+        static const PartCfg breaks[] = { {}, { false, 0.3f, 0, nullptr }, { true, 0.45f, 1, "Sub Drone" }, { true, 0.45f, 4, "Soft Pad" }, { true, 0.4f, 5, "Air Lead" }, { true, 0.3f, 5, "Pluck" }, { true, 0.6f, 0, nullptr } };
+        const PartCfg* cfg = style == 1 ? ambient : (style == 2 ? breaks : idm);
+        static const double tempi[] = { 128.0, 76.0, 170.0 };
+        static const float spaces[] = { 0.35f, 0.85f, 0.4f };
+        static const int chordSpeeds[] = { 0, 4, 2 };
+        static const char* kits[] = { "TR-8", "Studio", "Studio" };
+        style = juce::jlimit (0, 2, style);
+        live.setProperty (IDs::style, style, um);
+        live.setProperty (IDs::chordSpeed, chordSpeeds[style], um);
+        project.setProperty (IDs::tempo, tempi[style], um);
+        for (int part = 1; part < Live::NumParts; ++part)
+        {
+            auto lp = live.getChildWithProperty (IDs::id, part);
+            lp.setProperty (IDs::liveOn, cfg[part].on, um);
+            lp.setProperty (IDs::density, cfg[part].density, um);
+            if (part != Live::Drums && part != Live::Break) lp.setProperty (IDs::octave, cfg[part].octave, um);
+        }
+        for (auto t : tracks (project))
+        {
+            const int part = (int) t.getProperty (IDs::livePart, 0);
+            if (part <= 0 || part >= Live::NumParts) continue;
+            if (cfg[part].preset != nullptr && t.getChildWithName (IDs::SYNTH).isValid())
+                applySynthPreset (t.getChildWithName (IDs::SYNTH), cfg[part].preset, um);
+            if (part == Live::Drums && SampleLib::get().total() > 0) applyKit (t, kits[style], 1, um);
+            if (part == Live::Break) t.getChildWithName (IDs::BREAK).setProperty (IDs::sync, true, um);
+        }
+        applySpace (project, spaces[style], um);
+    }
+
+    juce::StringArray synthPresetNames() { return { "Init", "Bass", "Acid Bass", "Lead", "Soft Pad", "Glass Pad", "Pluck", "Keys", "Bell", "Grain Cloud", "Drone", "Sub Drone", "Air Lead" }; }
 
     void applySynthPreset (juce::ValueTree s, const juce::String& preset, juce::UndoManager* um)
     {
@@ -207,12 +309,13 @@ namespace Model
         }
         else if (preset == "Lead")
         {
-            set ("engine", 0); set ("osc1Wave", 0); set ("osc2Wave", 0); set ("oscMix", 0.5f); set ("osc2Detune", 12.0f); set ("unisonDetune", 0.35f);
-            set ("subLevel", 0.0f); set ("cutoff", 2600.0f); set ("reso", 0.22f); set ("filterEnv", 0.35f); set ("keyTrack", 0.5f);
-            set ("ampA", 0.004f); set ("ampD", 0.35f); set ("ampS", 0.55f); set ("ampR", 0.25f);
-            set ("modA", 0.002f); set ("modD", 0.3f); set ("modS", 0.1f); set ("modR", 0.3f);
-            set ("lfo1Rate", 5.2f); set ("gain", -9.0f);
-            mod (0, srcLfo1, dstPitch, 0.006f);
+            // a clean, slightly hollow lead: two saws an octave apart, gentle filter, almost no vibrato
+            set ("engine", 0); set ("osc1Wave", 0); set ("osc2Wave", 1); set ("oscMix", 0.3f); set ("osc2Semi", 12.0f); set ("osc2Detune", 4.0f); set ("unisonDetune", 0.12f);
+            set ("subLevel", 0.0f); set ("cutoff", 2000.0f); set ("reso", 0.12f); set ("filterEnv", 0.3f); set ("keyTrack", 0.6f);
+            set ("ampA", 0.006f); set ("ampD", 0.4f); set ("ampS", 0.6f); set ("ampR", 0.3f);
+            set ("modA", 0.002f); set ("modD", 0.25f); set ("modS", 0.15f); set ("modR", 0.3f);
+            set ("lfo1Rate", 4.8f); set ("gain", -10.0f); set ("glide", 0.03f);
+            mod (0, srcLfo1, dstPitch, 0.0015f);
             mod (1, srcVelocity, dstCutoff, 0.25f);
         }
         else if (preset == "Soft Pad")
@@ -269,6 +372,29 @@ namespace Model
             set ("lfo1Rate", 0.2f); set ("gain", -10.0f);
             mod (0, srcLfo1, dstGrainPos, 0.3f);
         }
+        else if (preset == "Drone")
+        {
+            set ("engine", 0); set ("osc1Wave", 3); set ("osc2Wave", 2); set ("oscMix", 0.35f); set ("osc2Semi", 7.0f); set ("osc2Detune", 5.0f); set ("unisonDetune", 0.4f);
+            set ("subLevel", 0.45f); set ("cutoff", 800.0f); set ("reso", 0.1f); set ("filterEnv", 0.05f); set ("keyTrack", 0.2f);
+            set ("ampA", 1.8f); set ("ampD", 1.0f); set ("ampS", 1.0f); set ("ampR", 3.5f);
+            set ("lfo1Rate", 0.08f); set ("gain", -9.0f);
+            mod (0, srcLfo1, dstCutoff, 0.15f);
+        }
+        else if (preset == "Sub Drone")
+        {
+            set ("engine", 0); set ("osc1Wave", 3); set ("osc2Wave", 2); set ("oscMix", 0.15f); set ("subLevel", 0.6f);
+            set ("cutoff", 380.0f); set ("reso", 0.05f); set ("filterEnv", 0.1f); set ("keyTrack", 0.3f); set ("drive", 0.15f);
+            set ("ampA", 0.004f); set ("ampD", 0.5f); set ("ampS", 0.9f); set ("ampR", 0.18f);
+            set ("glide", 0.04f); set ("gain", -5.0f);
+        }
+        else if (preset == "Air Lead")
+        {
+            set ("engine", 0); set ("osc1Wave", 2); set ("osc2Wave", 3); set ("oscMix", 0.35f); set ("osc2Semi", 12.0f); set ("osc2Detune", 3.0f);
+            set ("subLevel", 0.0f); set ("cutoff", 2400.0f); set ("reso", 0.08f); set ("filterEnv", 0.12f); set ("keyTrack", 0.5f);
+            set ("ampA", 0.06f); set ("ampD", 0.8f); set ("ampS", 0.7f); set ("ampR", 1.1f);
+            set ("lfo1Rate", 4.2f); set ("gain", -11.0f); set ("glide", 0.05f);
+            mod (0, srcLfo1, dstPitch, 0.0015f);
+        }
         else // Init: clean saw
         {
             set ("engine", 0); set ("osc1Wave", 0); set ("oscMix", 0.0f); set ("subLevel", 0.0f);
@@ -316,8 +442,13 @@ namespace Model
         arp.setProperty (IDs::livePart, (int) Live::Arp, nullptr);
         arp.setProperty (IDs::send1, 0.3f, nullptr);
         arp.setProperty (IDs::volume, -9.0f, nullptr);
+        auto brk = addTrack (p, "break", "Break", nullptr);
+        brk.setProperty (IDs::livePart, (int) Live::Break, nullptr);
+        brk.setProperty (IDs::volume, -5.0f, nullptr);
         addTrack (p, "audio", "Audio 1", nullptr);
         liveNode (p).setProperty (IDs::liveOn, true, nullptr);
+        if (SampleLib::get().total() > 0) applyKit (drums, "TR-8", 1, nullptr);
+        applySpace (p, 0.35f, nullptr);
         return p;
     }
 
@@ -531,13 +662,14 @@ namespace Model
         for (auto t : v.getChildWithName (IDs::TRACKS))
         {
             const auto type = t[IDs::type].toString();
-            if (type == "drums" && ! used[Live::Drums]) { t.setProperty (IDs::livePart, (int) Live::Drums, nullptr); used[Live::Drums] = true; }
+            if (type == "break" && ! used[Live::Break]) { t.setProperty (IDs::livePart, (int) Live::Break, nullptr); used[Live::Break] = true; }
+            else if (type == "drums" && ! used[Live::Drums]) { t.setProperty (IDs::livePart, (int) Live::Drums, nullptr); used[Live::Drums] = true; }
             else if (type == "synth" && nextSynth < 4) { const int part = synthOrder[nextSynth++]; t.setProperty (IDs::livePart, part, nullptr); used[part] = true; }
         }
-        static const char* presets[] = { "", "", "Bass", "Soft Pad", "Lead", "Pluck" };
+        static const char* presets[] = { "", "", "Bass", "Soft Pad", "Lead", "Pluck", "" };
         for (int part = 1; part < Live::NumParts; ++part)
         {
-            if (used[part]) continue;
+            if (used[part] || part == Live::Break) continue;   // the break track is added by load()
             auto t = addTrack (v, part == Live::Drums ? "drums" : "synth", Live::partNames()[part], nullptr);
             if (part != Live::Drums) applySynthPreset (t.getChildWithName (IDs::SYNTH), presets[part], nullptr);
             t.setProperty (IDs::livePart, part, nullptr);
@@ -560,6 +692,9 @@ namespace Model
         liveNode (v);
         if (! v.hasProperty (IDs::songMode)) v.setProperty (IDs::songMode, true, nullptr);
         upgradeForLive (v);
+        bool hasBreak = false;
+        for (auto t : v.getChildWithName (IDs::TRACKS)) hasBreak |= (int) t.getProperty (IDs::livePart, 0) == (int) Live::Break;
+        if (! hasBreak) addTrack (v, "break", "Break", nullptr).setProperty (IDs::livePart, (int) Live::Break, nullptr);
         return v;
     }
 
