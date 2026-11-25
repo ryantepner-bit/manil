@@ -50,6 +50,8 @@ set(MANDEL_CORE_SOURCES
     Source/Audio/Engine.cpp
     Source/Audio/Exporter.h
     Source/Audio/Exporter.cpp
+    Source/Live/LiveSequencer.h
+    Source/Live/LiveSequencer.cpp
 )
 
 set(MANDEL_UI_SOURCES
@@ -81,6 +83,8 @@ set(MANDEL_UI_SOURCES
     Source/UI/MixerPage.cpp
     Source/UI/AudioEditorPage.h
     Source/UI/AudioEditorPage.cpp
+    Source/UI/LivePage.h
+    Source/UI/LivePage.cpp
 )
 
 set(MANDEL_JUCE_MODULES
@@ -135,7 +139,9 @@ endif()
 
 # ---------------- Tests (console) ----------------
 juce_add_console_app(MandelbrotTests PRODUCT_NAME "MandelbrotTests")
-target_sources(MandelbrotTests PRIVATE ${MANDEL_CORE_SOURCES} Source/UI/Composer.cpp Tests/Tests.cpp)
+set(MANDEL_TEST_UI_SOURCES ${MANDEL_UI_SOURCES})
+list(REMOVE_ITEM MANDEL_TEST_UI_SOURCES Source/Main.cpp)
+target_sources(MandelbrotTests PRIVATE ${MANDEL_CORE_SOURCES} ${MANDEL_TEST_UI_SOURCES} Tests/Tests.cpp)
 target_include_directories(MandelbrotTests PRIVATE Source)
 target_compile_definitions(MandelbrotTests PRIVATE ${MANDEL_DEFS} MANDEL_TESTS=1)
 target_link_libraries(MandelbrotTests PRIVATE ${MANDEL_JUCE_MODULES}
