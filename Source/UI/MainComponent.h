@@ -12,6 +12,7 @@
 #include "DrumPage.h"
 #include "MixerPage.h"
 #include "AudioEditorPage.h"
+#include "LivePage.h"
 
 class MainComponent : public juce::Component,
                       public juce::ApplicationCommandTarget,
@@ -74,8 +75,8 @@ private:
     juce::MenuBarComponent menuBar { this };
     TransportBar transport;
     juce::TabbedComponent tabs { juce::TabbedButtonBar::TabsAtTop };
+    LivePage livePage;
     ArrangementView arrangement;
-    FractalPage fractal;
     PianoRollPage pianoRoll;
     GeneratorPage generators;
     SynthPage synth;

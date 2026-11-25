@@ -44,6 +44,7 @@ private:
     juce::OwnedArray<juce::Component> owned;
     juce::TextButton wtFromFractal { "Wavetable from fractal probe" }, wtLoad { "Load WAV wavetable" }, grainLoad { "Load WAV for grains" }, grainClear { "Use wavetable" };
     juce::TextButton init { "Init patch" }, randomize { "Mutate patch" };
+    juce::ComboBox presetBox;
     WavetableDisplay wtDisplay;
     juce::MidiKeyboardState keyState;
     juce::MidiKeyboardComponent keyboard { keyState, juce::MidiKeyboardComponent::horizontalKeyboard };

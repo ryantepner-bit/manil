@@ -20,14 +20,14 @@ struct AppState
     // fractal → music
     FractalFeatures features;               // features at the musical probe point
     juce::ChangeBroadcaster featuresChanged;
-    bool probeFollowsView = true;
+    bool probeFollowsView = false;          // clicking sets the probe; the view does not drag it along
 
     // editing
     double snapBeats = 1.0;                 // arrangement snap
     std::function<void (int)> showWorkspace; // index into workspace tabs
     std::function<void (const juce::String&)> setStatus;
 
-    enum Workspace { Arrangement = 0, Fractal, PianoRoll, Generative, Synth, Drums, Mixer, AudioEditor };
+    enum Workspace { Live = 0, Arrangement, PianoRoll, Generative, Synth, Drums, Mixer, AudioEditor };
 
     void beginEdit (const juce::String& name = {}) { undo.beginNewTransaction (name); }
 
@@ -43,6 +43,7 @@ struct AppState
     {
         selectedClip = c;
         if (c.isValid()) selectedTrack = Model::trackOfClip (c);
+        engine.setPatternClip (c.isValid() ? (int) c[IDs::id] : -1);
         engine.setLiveTrack (selectedTrack.isValid() ? (int) selectedTrack[IDs::id] : -1);
         selectionChanged.sendChangeMessage();
     }

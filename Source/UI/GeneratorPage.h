@@ -40,7 +40,7 @@ private:
     juce::ValueTree project;
     juce::ListBox list { "Generators", this };
     juce::TextButton addBtn { "+ Add generator" }, removeBtn { "Remove" }, autoSetup { "Auto setup (one per track)" };
-    juce::ToggleButton liveAll { "Fractal composition mode (live evolution while playing)" };
+    juce::ToggleButton liveAll { "Generators marked LIVE rewrite their clips while playing" };
 
     ParamChoice role { "Role", {} }, scale { "Scale", {} }, root { "Root", {} };
     juce::ComboBox trackBox;

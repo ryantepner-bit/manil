@@ -81,5 +81,5 @@ private:
     juce::Label padTitle;
     PadWaveform wave;
     std::unique_ptr<juce::FileChooser> chooser;
-    int breakGeneration = 0;
+    int breakGeneration = 0, breakPress = 0;
 };

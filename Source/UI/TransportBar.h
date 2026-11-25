@@ -18,7 +18,8 @@ private:
     AppState& state;
     juce::ValueTree project;
     juce::TextButton playBtn { "PLAY" }, stopBtn { "STOP" }, recBtn { "REC" };
-    PropToggle loopBtn { "LOOP" }, metroBtn { "CLICK", Theme::warn };
+    juce::TextButton songBtn { "SONG" };
+    PropToggle metroBtn { "CLICK", Theme::warn };
     juce::Slider tempo;
     juce::ComboBox tsNum, tsDen;
     juce::Label position, cpu, status;

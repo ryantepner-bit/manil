@@ -1,6 +1,7 @@
 #pragma once
 #include "AppState.h"
 #include "../Generative/Generator.h"
+#include <deque>
 
 /**
  * Fractal composition controller: turns the probe location into features,
@@ -42,8 +43,27 @@ public:
     std::function<void (double cx, double cy, double scale)> onPathMove;   // move the explorer view
     bool liveEnabled = true;
 
+    // ---------------- live generative mode
+    struct LiveNote { int part = 0, pitch = 60, velocity = 100; double start = 0, end = -1; };
+    const std::deque<LiveNote>& liveHistory() const { return history; }
+    /** Copies the last 'bars' bars that the live parts played into MIDI clips after the end of the song. */
+    int captureLive (int bars);
+    /** The visible fractal area: drift stays inside it. */
+    void setViewBounds (double cx, double cy, double width) { viewCx = cx; viewCy = cy; viewW = width; }
+    /** Runs one live tick immediately (tests). */
+    void liveTickNow() { liveDriftAndPublish(); drainLiveMonitor(); }
+    int liveTrackFor (int part) const;
+
 private:
     void timerCallback() override;
+    void liveDriftAndPublish();
+    void drainLiveMonitor();
+    double viewCx = -0.5, viewCy = 0.0, viewW = 3.2;
+    double driftAngle = 0.7;
+    int insideTicks = 0;
+    juce::Random driftRng { 12345 };
+    std::deque<LiveNote> history;
+    std::map<int, LiveNote> openNotes;
     void updateFeatures();
     void liveTick();
     int beatsPerBarInt() const;
