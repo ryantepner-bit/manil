@@ -518,6 +518,32 @@ namespace Model
         return false;
     }
 
+    // projects saved before Live mode have no tracks assigned to the live parts, so nothing would play:
+    // give each part a track (reuse existing drum / synth tracks, add the missing ones)
+    void upgradeForLive (juce::ValueTree v)
+    {
+        for (auto t : v.getChildWithName (IDs::TRACKS))
+            if ((int) t.getProperty (IDs::livePart, 0) > 0) return;
+        liveNode (v).setProperty (IDs::liveOn, true, nullptr);
+        bool used[Live::NumParts] = {};
+        const int synthOrder[] = { Live::Bass, Live::Chords, Live::Lead, Live::Arp };
+        int nextSynth = 0;
+        for (auto t : v.getChildWithName (IDs::TRACKS))
+        {
+            const auto type = t[IDs::type].toString();
+            if (type == "drums" && ! used[Live::Drums]) { t.setProperty (IDs::livePart, (int) Live::Drums, nullptr); used[Live::Drums] = true; }
+            else if (type == "synth" && nextSynth < 4) { const int part = synthOrder[nextSynth++]; t.setProperty (IDs::livePart, part, nullptr); used[part] = true; }
+        }
+        static const char* presets[] = { "", "", "Bass", "Soft Pad", "Lead", "Pluck" };
+        for (int part = 1; part < Live::NumParts; ++part)
+        {
+            if (used[part]) continue;
+            auto t = addTrack (v, part == Live::Drums ? "drums" : "synth", Live::partNames()[part], nullptr);
+            if (part != Live::Drums) applySynthPreset (t.getChildWithName (IDs::SYNTH), presets[part], nullptr);
+            t.setProperty (IDs::livePart, part, nullptr);
+        }
+    }
+
     juce::ValueTree load (const juce::File& f, juce::String& error)
     {
         auto xml = juce::XmlDocument::parse (f);
@@ -533,6 +559,7 @@ namespace Model
             v.appendChild (createEmptyProject().getChildWithName (IDs::MASTER).createCopy(), nullptr);
         liveNode (v);
         if (! v.hasProperty (IDs::songMode)) v.setProperty (IDs::songMode, true, nullptr);
+        upgradeForLive (v);
         return v;
     }
 
