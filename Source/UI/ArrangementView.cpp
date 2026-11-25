@@ -1,4 +1,5 @@
 #include "ArrangementView.h"
+#include "../Live/LiveSequencer.h"
 
 static const juce::Identifier autoParamId ("autoParam");
 
@@ -40,7 +41,14 @@ void TrackHeader::paint (juce::Graphics& g)
     g.setColour (Theme::textDim);
     g.setFont (Theme::font (10.0f));
     const auto type = track[IDs::type].toString().toUpperCase();
-    g.drawText (type, getLocalBounds().reduced (10, 4).removeFromBottom (14).removeFromLeft (60), juce::Justification::centredLeft);
+    g.drawText (type, getLocalBounds().reduced (10, 4).withHeight ((int) track.getProperty (IDs::height, 64) - 8).removeFromBottom (14).removeFromLeft (60), juce::Justification::centredLeft);
+    const int lp = (int) track.getProperty (IDs::livePart, 0);
+    if (lp > 0)
+    {
+        g.setColour (Theme::good.withAlpha (0.8f));
+        g.setFont (Theme::font (10.0f, true));
+        g.drawText ("LIVE " + Live::partNames()[lp].toUpperCase(), getLocalBounds().reduced (10, 6).removeFromTop (18), juce::Justification::centredRight);
+    }
 }
 
 void TrackHeader::resized()
@@ -716,7 +724,11 @@ void ArrangementView::mouseUp (const juce::MouseEvent& e)
 {
     if (e.eventComponent != &body) return;
     if (drag == Drag::Playhead && std::abs (e.getDistanceFromDragStartX()) <= 4)
+    {
+        // FL style: a click on the ruler moves the playhead and clears the loop selection
+        project.setProperty (IDs::loopOn, false, nullptr);
         state.engine.setPosition (snap (dragDownBeat));
+    }
     drag = Drag::None;
     dragClip = {};
     dragPoint = {};
