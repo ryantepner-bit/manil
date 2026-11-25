@@ -148,5 +148,19 @@ namespace IDs
     MANDEL_ID (drift)
     MANDEL_ID (midiCh)
     MANDEL_ID (variation)
+    MANDEL_ID (style)        // live: 0 IDM, 1 Ambient, 2 Breakbeat
+    MANDEL_ID (chordSpeed)   // live: 0 auto, 1/2/4 bars per chord
+    MANDEL_ID (space)        // live: reverb amount macro
+    MANDEL_ID (repeat)       // live: how much the lead repeats its motif
+    MANDEL_ID (kit)          // drum kit name
+
+    // break chopper
+    MANDEL_ID (BREAK)
+    MANDEL_ID (bpm)
+    MANDEL_ID (slices)
+    MANDEL_ID (sync)
+    MANDEL_ID (fade)
+    MANDEL_ID (tune)
+    MANDEL_ID (sensitivity)
 #undef MANDEL_ID
 }

@@ -48,7 +48,10 @@ public:
 private:
     void timerCallback() override;
     void valueTreeChildAdded (juce::ValueTree&, juce::ValueTree&) override {}
+    void valueTreePropertyChanged (juce::ValueTree&, const juce::Identifier&) override;
     void refreshMidiOuts();
+    void refreshKitBox();
+    juce::ValueTree drumTrack() const;
     void viewChanged();
 
     AppState& state;
@@ -59,10 +62,16 @@ private:
     PropToggle liveOn { "LIVE", Theme::good };
     juce::TextButton playBtn { "PLAY" };
     ParamChoice root { "Key", {} }, scale { "Scale", {} };
-    ParamKnob drift { "Drift", 0, 1 }, complexity { "Complexity", 0, 1 };
+    ParamKnob drift { "Drift", 0, 1 }, complexity { "Complexity", 0, 1 }, swing { "Swing", 0.0f, 0.6f }, space { "Space", 0, 1 }, repeat { "Repeat", 0, 1 };
+    juce::ComboBox styleBox, kitBox;
+    juce::Label styleL, kitL;
+    juce::Slider tempo;
+    ParamChoice chordSpeed { "Chords", { "Follow fractal", "Every bar", "Every 2 bars", "Every 3 bars", "Every 4 bars" } };
+    juce::TextButton samplesBtn { "Sample folder..." }, downloadBtn { "Get free drums" };
+    std::unique_ptr<juce::FileChooser> chooser;
     juce::OwnedArray<LivePartRow> rows;
     juce::ComboBox midiOut;
     juce::StringArray midiIds;
     juce::TextButton capture8 { "Capture last 8 bars" }, capture16 { "Capture last 16 bars" }, resetView { "Reset view" };
-    juce::Label info, mapping;
+    juce::Label info;
 };

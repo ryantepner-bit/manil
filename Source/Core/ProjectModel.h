@@ -54,6 +54,17 @@ namespace Model
     /** Ensures the project has a LIVE node (older files: created with live off). */
     juce::ValueTree liveNode (juce::ValueTree project);
 
+    /** Drum kits from the sample library (SampleLib) or "Synth" for the synthesised sounds. */
+    void applyKit (juce::ValueTree drumTrack, const juce::String& kit, juce::uint32 seed, juce::UndoManager* um);
+
+    /** Live styles: switch tempo, sounds, parts and space in one go (everything stays editable). */
+    juce::StringArray liveStyleNames();
+    void applyLiveStyle (juce::ValueTree project, int style, juce::UndoManager* um);
+    /** Reverb send of each live track = its base amount x the Space macro. */
+    void applySpace (juce::ValueTree project, float space, juce::UndoManager* um);
+
+    juce::ValueTree createBreakNode();
+
     // clips
     juce::ValueTree addMidiClip (juce::ValueTree track, double start, double length, juce::UndoManager* um);
     juce::ValueTree addPatternClip (juce::ValueTree track, double start, double length, juce::UndoManager* um);

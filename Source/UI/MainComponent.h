@@ -10,6 +10,7 @@
 #include "GeneratorPage.h"
 #include "SynthPage.h"
 #include "DrumPage.h"
+#include "BreakPage.h"
 #include "MixerPage.h"
 #include "AudioEditorPage.h"
 #include "LivePage.h"
@@ -26,7 +27,7 @@ public:
         cmdUndo, cmdRedo, cmdDuplicate, cmdDelete, cmdSplit,
         cmdPlay, cmdStop, cmdRecord, cmdLoop, cmdHome,
         cmdAddSynth, cmdAddDrums, cmdAddAudio, cmdImportAudio, cmdAutoGenerators, cmdGenerateAll,
-        cmdWorkspace1, cmdWorkspace2, cmdWorkspace3, cmdWorkspace4, cmdWorkspace5, cmdWorkspace6, cmdWorkspace7, cmdWorkspace8,
+        cmdWorkspace1, cmdWorkspace2, cmdWorkspace3, cmdWorkspace4, cmdWorkspace5, cmdWorkspace6, cmdWorkspace7, cmdWorkspace8, cmdWorkspace9,
         cmdShortcuts
     };
 
@@ -81,6 +82,7 @@ private:
     GeneratorPage generators;
     SynthPage synth;
     DrumPage drums;
+    BreakPage breaks;
     MixerPage mixer;
     AudioEditorPage audioEditor;
     juce::TooltipWindow tooltips { this, 600 };

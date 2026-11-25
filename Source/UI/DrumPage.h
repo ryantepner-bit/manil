@@ -78,6 +78,8 @@ private:
     ParamChoice reverseBox { "Direction", { "Forward", "Reverse" } }, chokeBox { "Choke", { "-", "1", "2", "3", "4" } };
     juce::ComboBox synthKind;
     juce::TextButton loadSample { "Load sample" }, clearSample { "Synth sound" }, slice { "Slice break to pads" };
+    juce::ComboBox kitBox;
+    juce::TextButton shuffleKit { "Shuffle kit" }, prevSample { "<" }, nextSample { ">" };
     juce::Label padTitle;
     PadWaveform wave;
     std::unique_ptr<juce::FileChooser> chooser;

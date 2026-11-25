@@ -27,7 +27,7 @@ struct AppState
     std::function<void (int)> showWorkspace; // index into workspace tabs
     std::function<void (const juce::String&)> setStatus;
 
-    enum Workspace { Live = 0, Arrangement, PianoRoll, Generative, Synth, Drums, Mixer, AudioEditor };
+    enum Workspace { Live = 0, Arrangement, PianoRoll, Generative, Synth, Drums, Breaks, Mixer, AudioEditor };
 
     void beginEdit (const juce::String& name = {}) { undo.beginNewTransaction (name); }
 
