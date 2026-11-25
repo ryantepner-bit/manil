@@ -106,6 +106,7 @@ void TrackProcessor::syncFrom (const juce::ValueTree& track)
 {
     ch.readFrom (track);
     armed.store ((bool) track.getProperty (IDs::arm, false));
+    livePart.store ((int) track.getProperty (IDs::livePart, 0));
     syncInserts (inserts, track.getChildWithName (IDs::INSERTS));
     if (synth)
     {
@@ -120,6 +121,7 @@ void TrackProcessor::syncFrom (const juce::ValueTree& track)
 Engine::Engine()
 {
     writerThread.startThread();
+    midiSender.startThread();
     recordingFolder = juce::File::getSpecialLocation (juce::File::userDocumentsDirectory).getChildFile ("MANDELBROT").getChildFile ("Recordings");
     masterBuf.setSize (2, chunk);
     inputBuf.setSize (2, chunk);
@@ -138,6 +140,7 @@ Engine::~Engine()
     recordWriter.store (nullptr);
     recordOwner.reset();
     writerThread.stopThread (2000);
+    midiSender.stopThread (1000);
     DeferredDeleter::get().flushAll();
 }
 
@@ -176,7 +179,79 @@ void Engine::setProject (juce::ValueTree p)
     masterCh.readFrom (m);
     syncInserts (masterInserts, m.getChildWithName (IDs::INSERTS));
     metronomeOn.store ((bool) project.getProperty (IDs::metronome, false));
+    patClipId = -1;
+    liveOn.store ((bool) project.getChildWithName (IDs::LIVE).getProperty (IDs::liveOn, false));
     rebuildNow();
+}
+
+void Engine::updateLoop()
+{
+    if (! project.isValid()) return;
+    const bool songMode = (bool) project.getProperty (IDs::songMode, true);
+    const double selA = project.getProperty (IDs::loopStart, 0.0), selB = project.getProperty (IDs::loopEnd, 0.0);
+    const bool selection = (bool) project.getProperty (IDs::loopOn, false) && selB > selA + 0.01;
+    bool active = false; double a = 0.0, b = 0.0;
+    juce::ValueTree patClip;
+    if (! songMode && patClipId >= 0)
+        for (auto t : Model::tracks (project))
+            for (auto c : t.getChildWithName (IDs::CLIPS))
+                if ((int) c[IDs::id] == patClipId) patClip = c;
+    if (patClip.isValid())                                                                        // PAT: loop the selected clip
+    { active = true; a = patClip[IDs::start]; b = a + juce::jmax (0.25, (double) patClip[IDs::length]); }
+    else if (selection) { active = true; a = selA; b = selB; }                                     // timeline selection
+    else if (songMode && ! liveOn.load())
+    {
+        // SONG: play the arrangement and loop back to bar 1 at the end of the last clip
+        const double bpb = juce::jmax (1, (int) project.getProperty (IDs::tsNum, 4)) * 4.0 / juce::jmax (1, (int) project.getProperty (IDs::tsDen, 4));
+        const double end = std::ceil (Model::projectEndBeat (project) / bpb - 1e-9) * bpb;
+        if (end > 0.0) { active = true; a = 0.0; b = end; }
+    }
+    loopA.store (a); loopB.store (b); loopActive.store (active);
+}
+
+// ---------------------------------------------------------------------------- MIDI out
+void Engine::MidiOutSender::push (int status, int d1, int d2)
+{
+    int s1, n1, s2, n2;
+    fifo.prepareToWrite (1, s1, n1, s2, n2);
+    if (n1 + n2 == 0) return;
+    data[(size_t) (n1 > 0 ? s1 : s2)] = (juce::uint32) ((status & 0xff) | ((d1 & 0x7f) << 8) | ((d2 & 0x7f) << 16));
+    fifo.finishedWrite (1);
+}
+
+void Engine::MidiOutSender::run()
+{
+    while (! threadShouldExit())
+    {
+        int s1, n1, s2, n2;
+        fifo.prepareToRead (fifo.getNumReady(), s1, n1, s2, n2);
+        if (n1 + n2 > 0)
+        {
+            const juce::ScopedLock sl (lock);
+            auto send = [this] (juce::uint32 m) { if (out != nullptr) out->sendMessageNow (juce::MidiMessage ((int) (m & 0xff), (int) ((m >> 8) & 0x7f), (int) ((m >> 16) & 0x7f))); };
+            for (int i = 0; i < n1; ++i) send (data[(size_t) (s1 + i)]);
+            for (int i = 0; i < n2; ++i) send (data[(size_t) (s2 + i)]);
+        }
+        fifo.finishedRead (n1 + n2);
+        wait (1);
+    }
+}
+
+bool Engine::setMidiOutput (const juce::String& identifier)
+{
+    std::unique_ptr<juce::MidiOutput> dev;
+    if (identifier.isNotEmpty()) dev = juce::MidiOutput::openDevice (identifier);
+    const juce::ScopedLock sl (midiSender.lock);
+    if (midiSender.out != nullptr)
+        for (int ch = 1; ch <= 16; ++ch) midiSender.out->sendMessageNow (juce::MidiMessage::allNotesOff (ch));
+    midiSender.out = std::move (dev);
+    return identifier.isEmpty() || midiSender.out != nullptr;
+}
+
+juce::String Engine::getMidiOutputId() const
+{
+    const juce::ScopedLock sl (midiSender.lock);
+    return midiSender.out != nullptr ? midiSender.out->getIdentifier() : juce::String();
 }
 
 void Engine::prepareAll (double sr)
@@ -275,6 +350,7 @@ void Engine::valueTreePropertyChanged (juce::ValueTree& tree, const juce::Identi
         {
             if (channelProp) { tp->ch.readFrom (tree); return; }
             if (prop == IDs::arm) { tp->armed.store ((bool) tree[prop]); return; }
+            if (prop == IDs::livePart) { tp->livePart.store ((int) tree[prop]); return; }
         }
         if (prop == IDs::name || prop == IDs::colour || prop == IDs::height || prop == IDs::showAuto) return;
     }
@@ -285,6 +361,9 @@ void Engine::valueTreePropertyChanged (juce::ValueTree& tree, const juce::Identi
     }
     if (type == IDs::MASTER) { masterCh.readFrom (tree); return; }
     if (type == IDs::PROJECT && prop == IDs::metronome) { metronomeOn.store ((bool) tree[prop]); return; }
+    if (type == IDs::PROJECT && (prop == IDs::songMode || prop == IDs::loopOn || prop == IDs::loopStart || prop == IDs::loopEnd)) { updateLoop(); return; }
+    if (type == IDs::LIVE) { if (prop == IDs::liveOn) { liveOn.store ((bool) tree[prop]); updateLoop(); } return; }
+    if (type == IDs::LPART) return;
     if (type == IDs::FRACTAL || type == IDs::GEN || type == IDs::BOOKMARK || type == IDs::PATH || type == IDs::KEY) return;
     if (type == IDs::PROJECT && prop == IDs::name) return;
     if (type == IDs::CLIP && prop == IDs::name) return;
@@ -404,12 +483,17 @@ void Engine::rebuildNow()
     currentOwner = snap;
     current.store (snap.get(), std::memory_order_release);
     DeferredDeleter::get().retire (old);
+    updateLoop();
 }
 
 // ---------------------------------------------------------------------------- transport
 void Engine::play()
 {
     if (playing.load()) return;
+    // FL style: in a looped range, start inside it
+    const double pos = positionBeat.load();
+    if (loopActive.load() && (pos < loopA.load() || pos >= loopB.load())) setPosition (loopA.load());
+    playStartBeat.store (positionBeat.load());
     if (recordEnabled.load()) startRecordingWriter();
     playing.store (true);
 }
@@ -418,11 +502,18 @@ void Engine::stop()
 {
     if (! playing.load())
     {
-        // second stop: return to loop start / zero
-        const bool loopOn = project.isValid() && (bool) project.getProperty (IDs::loopOn, false);
-        setPosition (loopOn ? (double) project.getProperty (IDs::loopStart, 0.0) : 0.0);
+        // stop while stopped: back to the start (of the loop, else bar 1)
+        setPosition (loopActive.load() ? loopA.load() : 0.0);
         return;
     }
+    playing.store (false);
+    finishRecording();
+    setPosition (playStartBeat.load());   // FL style: stop returns to where playback started
+}
+
+void Engine::pause()
+{
+    if (! playing.load()) return;
     playing.store (false);
     finishRecording();
 }
@@ -565,28 +656,54 @@ void Engine::processBlock (float* L, float* R, const float* inL, const float* in
         while (off < n && numSegs < 4)
         {
             int len = n - off; bool wrap = false;
-            const bool looping = s->loopOn && ! offline && s->loopEnd > s->loopStart + 0.01;
-            if (looping && beat < s->loopEnd && beat + len * bps >= s->loopEnd)
+            const double la = loopA.load (std::memory_order_relaxed), lb = loopB.load (std::memory_order_relaxed);
+            const bool looping = ! offline && loopActive.load (std::memory_order_relaxed) && lb > la + 0.01;
+            if (looping && beat >= lb) beat = la;    // e.g. loop shortened behind the playhead
+            if (looping && beat < lb && beat + len * bps >= lb)
             {
-                len = juce::jlimit (1, n - off, (int) std::ceil ((s->loopEnd - beat) / bps));
+                len = juce::jlimit (1, n - off, (int) std::ceil ((lb - beat) / bps));
                 wrap = true;
             }
             segs[numSegs++] = { off, len, beat, wrap };
             off += len;
             beat += len * bps;
-            if (wrap) beat = s->loopStart + juce::jmax (0.0, beat - s->loopEnd);
+            if (wrap) beat = la + juce::jmax (0.0, beat - lb);
         }
     }
 
     // ---- live notes
-    Live live[64]; int numLive = 0;
+    LiveNote liveNotes[64]; int numLive = 0;
     if (! offline)
     {
         int s1, n1, s2, n2;
         liveFifo.prepareToRead (64, s1, n1, s2, n2);
-        for (int i = 0; i < n1; ++i) live[numLive++] = liveData[(size_t) (s1 + i)];
-        for (int i = 0; i < n2; ++i) live[numLive++] = liveData[(size_t) (s2 + i)];
+        for (int i = 0; i < n1; ++i) liveNotes[numLive++] = liveData[(size_t) (s1 + i)];
+        for (int i = 0; i < n2; ++i) liveNotes[numLive++] = liveData[(size_t) (s2 + i)];
         liveFifo.finishedRead (n1 + n2);
+    }
+
+    // ---- live generative parts
+    bool liveRan = false;
+    if (! offline)
+    {
+        if (tr.playing && ! tr.wasPlaying) live.alignTo (tr.beat);
+        if (tr.playing && ! stopping && liveOn.load (std::memory_order_relaxed))
+        {
+            const double bpb = juce::jmax (1, s->tsNum) * 1.0;
+            live.process (n, bps, (int) bpb);
+        }
+        else live.flush();
+        liveRan = true;
+        for (int p = 1; p < Live::NumParts; ++p)
+        {
+            const int ch = juce::jlimit (1, 16, live.channelFor (p)) - 1;
+            for (int i = 0; i < live.eventCount[p]; ++i)
+            {
+                const auto& e = live.events[p][i];
+                if (e.velocity > 0.0f) midiSender.push (0x90 | ch, e.note, juce::jlimit (1, 127, (int) std::round (e.velocity * 127.0f)));
+                else midiSender.push (0x80 | ch, e.note, 0);
+            }
+        }
     }
 
     bool anySolo = false;
@@ -617,7 +734,11 @@ void Engine::processBlock (float* L, float* R, const float* inL, const float* in
         }
 
         for (int i = 0; i < numLive; ++i)
-            if (live[i].track == t.id) push (0, live[i].note, live[i].vel);
+            if (liveNotes[i].track == t.id) push (0, liveNotes[i].note, liveNotes[i].vel);
+        if (liveRan)
+            if (const int lp = tp.livePart.load (std::memory_order_relaxed); lp > 0 && lp < Live::NumParts)
+                for (int i = 0; i < live.eventCount[lp]; ++i)
+                    push (live.events[lp][i].offset, live.events[lp][i].note, live.events[lp][i].velocity);
 
         // ---- clip events
         for (int si = 0; si < numSegs; ++si)

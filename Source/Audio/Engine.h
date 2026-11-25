@@ -7,6 +7,7 @@
 #include "Synth.h"
 #include "DrumMachine.h"
 #include "Effects.h"
+#include "../Live/LiveSequencer.h"
 
 std::shared_ptr<WavetableData> wavetableFromSample (const SampleData& d);
 void applySynthSources (SynthEngine& synth, const juce::ValueTree& synthNode);
@@ -37,6 +38,7 @@ public:
     std::unique_ptr<SynthEngine> synth;
     std::unique_ptr<DrumEngine> drums;
     std::atomic<bool> armed { false };
+    std::atomic<int> livePart { 0 };       // Live::Part played by this track (0 = none)
     juce::AudioBuffer<float> buf;
     std::vector<NoteEvent> scratch;
     std::array<juce::uint8, 128> held {};
@@ -83,11 +85,29 @@ public:
     // ---------------- transport (message thread)
     void play();
     void stop();
+    void pause();      // stop without returning to the start position
     void togglePlay() { isPlaying() ? stop() : play(); }
     bool isPlaying() const { return playing.load(); }
     void setPosition (double beat);
     double getPosition() const { return positionBeat.load(); }
     void setRecordEnabled (bool shouldRecord);
+    double getPlayStartBeat() const { return playStartBeat.load(); }
+
+    // ---------------- FL-style looping (message thread)
+    /** Pattern mode loops this range (the selected clip). length <= 0 clears it. */
+    void setPatternClip (int clipId) { patClipId = clipId; updateLoop(); }
+    void updateLoop();
+    bool isLoopActive() const { return loopActive.load(); }
+    double getLoopStart() const { return loopA.load(); }
+    double getLoopEnd() const { return loopB.load(); }
+
+    // ---------------- live generative mode
+    Live::Sequencer& getLive() { return live; }
+    bool isLiveOn() const { return liveOn.load(); }
+    double getLiveBeat() const { return live.liveBeat.load(); }
+    /** Message thread: choose a MIDI output for the live parts ("" = none). */
+    bool setMidiOutput (const juce::String& identifier);
+    juce::String getMidiOutputId() const;
     bool isRecordEnabled() const { return recordEnabled.load(); }
     bool isRecording() const { return recordWriter.load() != nullptr; }
 
@@ -169,9 +189,9 @@ private:
     GlobalMods mods;
     juce::SpinLock renderLock;
 
-    struct Live { int track; int note; float vel; };
+    struct LiveNote { int track; int note; float vel; };
     juce::AbstractFifo liveFifo { 1024 };
-    std::array<Live, 1024> liveData;
+    std::array<LiveNote, 1024> liveData;
     std::atomic<int> liveTrackId { -1 };
 
     std::atomic<const SampleData*> previewData { nullptr };
@@ -187,6 +207,28 @@ private:
     std::atomic<double> recordStartBeat { 0.0 };
     std::atomic<juce::int64> recordedSamples { 0 };
     int recordTrackId = -1;
+
+    // looping
+    std::atomic<bool> loopActive { false };
+    std::atomic<double> loopA { 0.0 }, loopB { 16.0 };
+    std::atomic<double> playStartBeat { 0.0 };
+    int patClipId = -1;
+
+    // live
+    Live::Sequencer live;
+    std::atomic<bool> liveOn { false };
+
+    // MIDI out for live parts (audio thread -> FIFO -> sender thread)
+    struct MidiOutSender : juce::Thread
+    {
+        MidiOutSender() : juce::Thread ("MANDELBROT midi out") {}
+        void run() override;
+        juce::AbstractFifo fifo { 2048 };
+        std::array<juce::uint32, 2048> data {};
+        juce::CriticalSection lock;
+        std::unique_ptr<juce::MidiOutput> out;
+        void push (int status, int d1, int d2);
+    } midiSender;
 
     float metroPhase = 0.0f, metroEnv = 0.0f; int metroAccent = 0;
     std::atomic<bool> metronomeOn { false };
