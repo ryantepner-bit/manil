@@ -138,5 +138,15 @@ namespace IDs
     MANDEL_ID (probeX)
     MANDEL_ID (probeY)
     MANDEL_ID (beat)
+
+    // live generative mode
+    MANDEL_ID (LIVE)
+    MANDEL_ID (LPART)
+    MANDEL_ID (livePart)
+    MANDEL_ID (liveOn)
+    MANDEL_ID (songMode)
+    MANDEL_ID (drift)
+    MANDEL_ID (midiCh)
+    MANDEL_ID (variation)
 #undef MANDEL_ID
 }
