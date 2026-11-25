@@ -10,6 +10,8 @@
 #include "Live/LiveSequencer.h"
 #include "UI/ArrangementView.h"
 #include "UI/LivePage.h"
+#include "Audio/SampleLibrary.h"
+#include "Audio/BreakEngine.h"
 #include <set>
 
 static int failures = 0, checks = 0;
@@ -119,6 +121,23 @@ static void testModel()
     CHECK (loaded.isValid());
     CHECK (loaded.isEquivalentTo (p));
 
+    // a project saved before Live mode: tracks get live parts on load, missing parts get tracks
+    {
+        auto old = Model::createEmptyProject();
+        Model::addTrack (old, "drums", "Old drums", nullptr);
+        Model::addTrack (old, "synth", "Old synth", nullptr);
+        old.removeChild (old.getChildWithName (IDs::LIVE), nullptr);
+        auto of = juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("mandel_old.mandelbrot");
+        CHECK (Model::save (old, of));
+        juce::String e2;
+        auto up = Model::load (of, e2);
+        std::set<int> parts;
+        for (auto t : Model::tracks (up)) if ((int) t.getProperty (IDs::livePart, 0) > 0) parts.insert ((int) t[IDs::livePart]);
+        CHECK (parts.size() == 6);           // drums, bass, chords, lead, arp + a new break track
+        CHECK ((int) Model::tracks (up).getChild (0)[IDs::livePart] == (int) Live::Drums);
+        CHECK ((bool) Model::liveNode (up)[IDs::liveOn]);
+    }
+
     auto steps = Model::decodeSteps ("100:50:2,0:100:1", 4);
     CHECK (steps.size() == 4 && steps[0].velocity == 100 && steps[0].probability == 50 && steps[0].ratchet == 2);
 }
@@ -212,7 +231,7 @@ static void testEngineRender()
         CHECK (Exporter::exportMidi (p, mf, err));
         juce::MidiFile m; juce::FileInputStream is (mf);
         CHECK (m.readFrom (is));
-        CHECK (m.getNumTracks() == 6);  // meta + 5 instrument tracks
+        CHECK (m.getNumTracks() == 7);  // meta + 6 instrument tracks (incl. break)
         int notes = 0;
         for (int t = 0; t < m.getNumTracks(); ++t) for (auto* e : *m.getTrack (t)) notes += e->message.isNoteOn();
         CHECK (notes > 20);
@@ -250,7 +269,7 @@ static void testComposer()
     const int roles[] = { Gen::Breaks, Gen::Bass, Gen::Chords, Gen::Melody, Gen::Arp };
     int i = 0;
     for (auto t : Model::tracks (state.project))
-        if (t[IDs::type].toString() != "audio") gens.push_back (composer.addGenerator (t[IDs::id], roles[i++]));
+        if (t[IDs::type].toString() != "audio" && t[IDs::type].toString() != "break") gens.push_back (composer.addGenerator (t[IDs::id], roles[i++]));
     CHECK (gens.size() == 5);
 
     // generate, then evolve: motif is kept and mutated, generation counts up
@@ -373,7 +392,8 @@ static void testLive()
             if (n.start >= 12 * bpb && n.start < 14 * bpb) leadLate.push_back (n.pitch);
         }
     }
-    for (int p = 1; p < Live::NumParts; ++p) { std::cout << "  " << Live::partNames()[p] << ": " << perPart[p] << "\n"; CHECK (perPart[p] > 0); }
+    for (int p = 1; p < Live::NumParts; ++p) { std::cout << "  " << Live::partNames()[p] << ": " << perPart[p] << "\n"; if (p != Live::Break) CHECK (perPart[p] > 0); }
+    CHECK (perPart[Live::Break] == 0);              // the break is off in the IDM style
     CHECK (inKey);                                   // everything mapped onto A dorian
     CHECK (leadPitches.size() >= 4);
     CHECK (leadEarly != leadLate);                   // always evolving
@@ -419,6 +439,174 @@ static void testLive()
     for (auto t : Model::tracks (rig.state.project))
         if (auto* tp = rig.engine.getTrackProcessor (t[IDs::id]); tp != nullptr && tp->synth) voices += tp->synth->activeVoiceCount();
     CHECK (voices == 0);
+}
+
+// ---------------------------------------------------------------------------- styles, lead phrases, break chopper, samples
+static void testStyles()
+{
+    juce::ScopedJuceInitialiser_GUI init;
+    {
+        // ambient: slow, sparse drums, long chords, a drone
+        LiveRig rig;
+        Model::applyLiveStyle (rig.state.project, Live::Ambient, nullptr);
+        CHECK ((double) rig.state.project[IDs::tempo] < 90.0);
+        rig.composer->liveTickNow();
+        rig.engine.play();
+        juce::AudioBuffer<float> rec (2, rig.blocksForBars (16) * 256);
+        rig.record = &rec;
+        rig.run (rig.blocksForBars (16));
+        if (auto w = makeWavWriter (juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("mandel_ambient.wav"), rig.engine.getSampleRate(), 2, 16))
+            w->writeFromAudioSampleBuffer (rec, 0, rig.recPos);
+        int drums = 0, chords = 0, bass = 0; double chordLen = 0, bassLen = 0;
+        for (auto& n : rig.composer->liveHistory())
+        {
+            if (n.part == Live::Drums) ++drums;
+            if (n.part == Live::Chords) { ++chords; chordLen += n.end - n.start; }
+            if (n.part == Live::Bass) { ++bass; bassLen += n.end - n.start; }
+        }
+        std::cout << "ambient: drums " << drums << ", chord notes " << chords << " (avg " << (chords ? chordLen / chords : 0) << " beats), bass " << bass << "\n";
+        CHECK (drums < 16 * 6);                          // far sparser than IDM (>64)
+        CHECK (chords > 0 && chordLen / juce::jmax (1, chords) > 8.0);   // multi-bar pads
+        CHECK (bass > 0 && bassLen / juce::jmax (1, bass) > 8.0);         // drone
+        CHECK (rig.peak > 0.01f && rig.finite);
+    }
+    {
+        // breakbeat: the break part chops the built-in break
+        LiveRig rig;
+        Model::applyLiveStyle (rig.state.project, Live::Breakbeat, nullptr);
+        rig.engine.rebuildNow();
+        rig.composer->liveTickNow();
+        rig.engine.play();
+        juce::AudioBuffer<float> rec (2, rig.blocksForBars (8) * 256);
+        rig.record = &rec;
+        rig.run (rig.blocksForBars (8));
+        if (auto w = makeWavWriter (juce::File::getSpecialLocation (juce::File::tempDirectory).getChildFile ("mandel_breakbeat.wav"), rig.engine.getSampleRate(), 2, 16))
+            w->writeFromAudioSampleBuffer (rec, 0, rig.recPos);
+        std::set<int> slices;
+        int breakHits = 0;
+        for (auto& n : rig.composer->liveHistory()) if (n.part == Live::Break) { ++breakHits; slices.insert (n.pitch); }
+        std::cout << "breakbeat: " << breakHits << " slice hits, " << slices.size() << " different slices, peak " << rig.peak << "\n";
+        CHECK (breakHits > 32);
+        CHECK (slices.size() >= 4);
+        CHECK (rig.peak > 0.05f && rig.finite);
+    }
+}
+
+static void testLeadPhrases()
+{
+    juce::ScopedJuceInitialiser_GUI init;
+    LiveRig rig;
+    auto live = Model::liveNode (rig.state.project);
+    live.setProperty (IDs::drift, 0.0f, nullptr);          // hold still: the form must come from the phrase logic
+    live.setProperty (IDs::repeat, 1.0f, nullptr);
+    rig.composer->liveTickNow();
+    rig.engine.play();
+    rig.run (rig.blocksForBars (8));
+    const double bpb = rig.state.beatsPerBar();
+    std::vector<double> a, b;   // onsets of phrase A (bars 0-1) and A' (bars 2-3), relative
+    int maxJump = 0, last = -1;
+    for (auto& n : rig.composer->liveHistory())
+    {
+        if (n.part != Live::Lead) continue;
+        if (n.start < 2 * bpb) a.push_back (n.start);
+        else if (n.start < 4 * bpb) b.push_back (n.start - 2 * bpb);
+        if (last >= 0) maxJump = juce::jmax (maxJump, std::abs (n.pitch - last));
+        last = n.pitch;
+    }
+    std::cout << "lead: phrase A " << a.size() << " notes, A' " << b.size() << " notes, largest jump " << maxJump << " semitones\n";
+    CHECK (a.size() >= 3 && a.size() == b.size());       // A' keeps A's rhythm
+    bool sameRhythm = a.size() == b.size();
+    for (size_t i = 0; sameRhythm && i < a.size(); ++i) sameRhythm = std::abs (a[i] - b[i]) < 0.01;
+    CHECK (sameRhythm);
+    CHECK (maxJump <= 12);                                // no wild leaps
+}
+
+static void testBreakEngine()
+{
+    juce::ScopedJuceInitialiser_GUI init;
+    auto brk = Engine::defaultBreak();
+    CHECK (brk != nullptr && brk->numFrames() > 44100);
+    auto sl = BreakEngine::detectSlices (*brk, 0.5f);
+    std::cout << "built-in break: " << brk->numFrames() / brk->sampleRate << " s, " << (sl.size() - 1) << " slices detected, bpm guess " << BreakEngine::guessBpm (*brk) << "\n";
+    CHECK (sl.size() >= 9 && sl.size() <= 40);
+    CHECK (sl.front() == 0.0f && sl.back() == 1.0f);
+    CHECK (std::is_sorted (sl.begin(), sl.end()));
+    CHECK (std::abs (BreakEngine::guessBpm (*brk) - 140.0f) < 1.0f);
+    CHECK (BreakEngine::decodeSlices (BreakEngine::encodeSlices (sl)).size() == sl.size());
+    // play slice 3 and slice 3 + count (wraps) on an engine
+    BreakEngine e;
+    e.prepare (44100.0, 512);
+    e.setSample (brk);
+    e.setSlices (BreakEngine::equalSlices (8));
+    std::vector<float> L (4096), R (4096);
+    NoteEvent ev[] = { { 0, 36 + 3, 1.0f } };
+    e.process (L.data(), R.data(), 4096, ev, 1, 140.0);
+    float pk = 0; for (auto v : L) pk = juce::jmax (pk, std::abs (v));
+    CHECK (pk > 0.01f);
+    CHECK (e.playingSlice.load() == 3);
+    // with sync, a slower project tempo makes the slice last longer
+    BreakEngine slow; slow.prepare (44100.0, 512); slow.setSample (brk); slow.setSlices (BreakEngine::equalSlices (8));
+    int lenFast = 0, lenSlow = 0;
+    for (auto* eng : { &e, &slow })
+    {
+        eng->allNotesOff();
+        int len = 0;
+        for (int blk = 0; blk < 200; ++blk)
+        {
+            std::fill (L.begin(), L.end(), 0.0f); std::fill (R.begin(), R.end(), 0.0f);
+            NoteEvent e2[] = { { 0, 36, 1.0f } };
+            eng->process (L.data(), R.data(), 256, e2, blk == 0 ? 1 : 0, eng == &e ? 140.0 : 70.0);
+            if (eng->playingSlice.load() >= 0) len += 256;
+        }
+        (eng == &e ? lenFast : lenSlow) = len;
+    }
+    CHECK (lenSlow > lenFast * 1.7);
+}
+
+static void testSampleLibrary()
+{
+    juce::ScopedJuceInitialiser_GUI init;
+    using namespace SampleLib;
+    CHECK (classify ("kick-808-boom.flac") == Kick);
+    CHECK (classify ("Snare_Hard_03.wav") == Snare);
+    CHECK (classify ("hat-808-open-long.flac") == HatOpen);
+    CHECK (classify ("HH_closed_tight.wav") == HatClosed);
+    CHECK (classify ("OH 01.wav") == HatOpen);
+    CHECK (classify ("bass-808-sub.flac") == Sub);
+    CHECK (classify ("tom-studio-floor.flac") == TomLow);
+    CHECK (classify ("tom-808-high.flac") == TomHigh);
+    CHECK (classify ("clap-snare.flac") == Clap);
+    CHECK (classify ("Amen Break 170bpm.wav") == Break);
+    CHECK (classify ("shaker-small.flac") == Shaker);
+    CHECK (classify ("conga-808-low.flac") == Perc);
+    CHECK (classify ("vocal-chop.wav") == -1);
+    CHECK (freeLibraryFiles().size() > 100);
+    // a folder of real samples (the free library, if this machine has a copy): kits and FLAC decoding
+    const juce::File src ("/tmp/synk/crates/engine/library");
+    if (src.isDirectory())
+    {
+        setFolder (src);
+        std::cout << "sample library: " << get().total() << " files";
+        for (int c = 0; c < NumCats; ++c) std::cout << (c ? ", " : " (") << catNames()[c] << " " << get().files[(size_t) c].size();
+        std::cout << ")\n";
+        CHECK (get().files[Kick].size() > 10 && get().files[Snare].size() > 10 && get().files[HatClosed].size() > 5);
+        for (auto kit : { "Studio", "808", "Trap", "TR-8" })
+        {
+            auto files = buildKit (kit, 1);
+            int found = 0;
+            for (auto& f : files) found += f.existsAsFile();
+            CHECK (found >= 10);
+            CHECK (files[0].getFileName().startsWith ("kick"));
+            CHECK (files[1].getFileName().startsWith ("snare"));
+        }
+        auto d = AudioPool::get().load (buildKit ("Studio", 1)[1]);
+        CHECK (d != nullptr && d->numFrames() > 1000);       // FLAC decodes
+        auto p = Model::createDefaultProject();
+        auto drums = Model::findTrack (p, 1);
+        Model::applyKit (drums, "Trap", 2, nullptr);
+        CHECK (drums.getChildWithName (IDs::DRUMKIT).getChild (0)[IDs::sample].toString().contains ("kick-trap"));
+        CHECK (stepSample (0, juce::File (drums.getChildWithName (IDs::DRUMKIT).getChild (0)[IDs::sample].toString()), 1).getFileName().startsWith ("kick"));
+    }
 }
 
 static void testTransportFL()
@@ -593,6 +781,10 @@ int main()
     testLive();
     testTransportFL();
     testGenerateVariety();
+    testStyles();
+    testLeadPhrases();
+    testBreakEngine();
+    testSampleLibrary();
     testArrangementUI();
     std::cout << checks << " checks, " << failures << " failures\n";
     return failures == 0 ? 0 : 1;
