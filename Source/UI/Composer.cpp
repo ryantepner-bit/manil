@@ -1,4 +1,6 @@
 #include "Composer.h"
+#include "../Live/LiveSequencer.h"
+#include <tuple>
 
 Composer::Composer (AppState& s) : state (s) { startTimerHz (20); }
 Composer::~Composer() { stopTimer(); }
@@ -11,6 +13,9 @@ void Composer::setProject (juce::ValueTree p)
     lastLiveFeatures.clear();
     auto fr = project.getChildWithName (IDs::FRACTAL);
     setProbe (fr.getProperty (IDs::probeX, -0.7436), fr.getProperty (IDs::probeY, 0.1318), (double) fr.getProperty (IDs::scaleF, 0.02) * 0.25, true);
+    viewCx = fr.getProperty (IDs::cx, -0.5); viewCy = fr.getProperty (IDs::cy, 0.0); viewW = fr.getProperty (IDs::scaleF, 3.2);
+    history.clear(); openNotes.clear();
+    liveDriftAndPublish();
 }
 
 int Composer::beatsPerBarInt() const { return juce::jmax (1, (int) std::round (state.beatsPerBar())); }
@@ -76,6 +81,10 @@ juce::ValueTree Composer::generate (juce::ValueTree gen, double atBeat, const Fr
         if (state.setStatus) state.setStatus ("The Breaks role needs a drum track - pick another role or target");
         return {};
     }
+    // every press gives a new variation (the old behaviour returned the same thing at the same place)
+    const int variation = (int) gen.getProperty (IDs::variation, 0) + 1;
+    gen.setProperty (IDs::variation, variation, nullptr);
+    s.seed = s.seed * 1000003 + variation * 7919;
     const int generation = (int) gen.getProperty (IDs::generation, 0) + (evolve ? 1 : 0);
     Gen::Motif prev = evolve ? Gen::Motif::parse (gen[IDs::motif].toString()) : Gen::Motif();
     float evolveAmount = 0.0f;
@@ -97,6 +106,8 @@ juce::ValueTree Composer::generate (juce::ValueTree gen, double atBeat, const Fr
     auto clip = intoClip;
     if (! clip.isValid() || (clip[IDs::type].toString() == "pattern") != pattern)
     {
+        // never stack a new clip on top of an existing one: move to the first free spot
+        atBeat = Model::freeSpot (track, atBeat, len, state.beatsPerBar());
         clip = pattern ? Model::addPatternClip (track, atBeat, len, &state.undo)
                        : Model::addMidiClip (track, atBeat, len, &state.undo);
         clip.setProperty (IDs::name, gen[IDs::name].toString(), &state.undo);
@@ -236,6 +247,134 @@ void Composer::timerCallback()
 
     if (playing && liveEnabled) liveTick();
     lastBeat = beat;
+    liveDriftAndPublish();
+    drainLiveMonitor();
+}
+
+// ---------------------------------------------------------------------------- live mode
+int Composer::liveTrackFor (int part) const
+{
+    for (auto t : Model::tracks (project))
+        if ((int) t.getProperty (IDs::livePart, 0) == part) return t[IDs::id];
+    return -1;
+}
+
+void Composer::liveDriftAndPublish()
+{
+    if (! project.isValid()) return;
+    auto live = Model::liveNode (project);
+    const float drift = (float) live.getProperty (IDs::drift, 0.35f);
+    const bool on = (bool) live.getProperty (IDs::liveOn, false);
+    if (on && state.engine.isPlaying() && drift > 0.001f)
+    {
+        // wander along the boundary of the set: that is where the orbits are musically interesting.
+        auto quality = [] (double x, double y)
+        {
+            if (MandelMath::inMainBulbs (x, y)) return 2.0;          // deep inside the big bulbs: dull, avoid
+            const auto r = MandelMath::iterate (x, y, 300);
+            return r.escaped ? std::log1p (r.smooth) / std::log1p (300.0) : 1.0;
+        };
+        // pscale = a quarter of the visible width: at drift 0.35 the probe crosses the view in ~20 s
+        const double step = pscale * (0.002 + 0.03 * drift * drift + 0.012 * drift);
+        driftAngle += (driftRng.nextDouble() - 0.5) * 0.5;
+        auto at = [&] (double a) { return std::make_pair (px + std::cos (a) * step, py + std::sin (a) * step); };
+        auto [nx, ny] = at (driftAngle);
+        double q = quality (nx, ny);
+        const bool stuckInside = insideTicks > 160;          // ~8 s inside a small bulb: head for the edge
+        const bool outsideView = std::abs (nx - viewCx) > viewW * 0.45 || std::abs (ny - viewCy) > viewW * 0.3;
+        if (q < 0.35 || q > 1.5 || (stuckInside && q >= 1.0) || outsideView)
+        {
+            double bestA = driftAngle, bestScore = -1e9;
+            for (int k = 0; k < 12; ++k)
+            {
+                const double a = driftAngle + k * juce::MathConstants<double>::twoPi / 12.0;
+                auto [x, y] = at (a);
+                const double qq = quality (x, y);
+                // best: just outside the edge (long orbits); small bulbs are ok for a while; big bulbs/far out are not
+                double score = qq > 1.5 ? -1.5 : (qq >= 1.0 ? (stuckInside ? -1.0 : 0.3) : 1.0 - std::abs (qq - 0.8) * 2.0);
+                score -= 2.0 * (std::abs (x - viewCx) / viewW + std::abs (y - viewCy) / viewW);
+                if (score > bestScore) { bestScore = score; bestA = a; }
+            }
+            driftAngle = bestA;
+            std::tie (nx, ny) = at (driftAngle);
+            q = quality (nx, ny);
+        }
+        insideTicks = q >= 1.0 ? insideTicks + 1 : 0;
+        if (q > 1.5)
+        {
+            // still in a main bulb (e.g. the user clicked there): step straight out towards the edge
+            const double r = std::sqrt (nx * nx + ny * ny);
+            if (r > 1e-9) { nx += nx / r * step * 3.0; ny += ny / r * step * 3.0; }
+        }
+        px = nx; py = ny;
+        featuresDirty = true;
+        auto fr = project.getChildWithName (IDs::FRACTAL);
+        fr.setProperty (IDs::probeX, px, nullptr);
+        fr.setProperty (IDs::probeY, py, nullptr);
+    }
+    auto frame = std::make_shared<Live::Frame>();
+    Live::buildFrame (*frame, px, py, pscale, live);
+    state.engine.getLive().setFrame (frame);
+}
+
+void Composer::drainLiveMonitor()
+{
+    auto& seq = state.engine.getLive();
+    int s1, n1, s2, n2;
+    seq.monitorFifo.prepareToRead (seq.monitorFifo.getNumReady(), s1, n1, s2, n2);
+    auto handle = [this] (const Live::MonitorEvent& e)
+    {
+        const int key = e.part * 128 + e.note;
+        auto it = openNotes.find (key);
+        if (it != openNotes.end())
+        {
+            it->second.end = e.beat;
+            history.push_back (it->second);
+            openNotes.erase (it);
+        }
+        if (e.velocity > 0) openNotes[key] = { e.part, e.note, e.velocity, e.beat, -1.0 };
+    };
+    for (int i = 0; i < n1; ++i) handle (seq.monitorData[(size_t) (s1 + i)]);
+    for (int i = 0; i < n2; ++i) handle (seq.monitorData[(size_t) (s2 + i)]);
+    seq.monitorFifo.finishedRead (n1 + n2);
+    const double keep = state.engine.getLiveBeat() - 64.0 * state.beatsPerBar();
+    while (! history.empty() && history.front().start < keep) history.pop_front();
+    if (history.size() > 20000) history.erase (history.begin(), history.begin() + 5000);
+}
+
+int Composer::captureLive (int bars)
+{
+    drainLiveMonitor();
+    const double bpb = state.beatsPerBar();
+    const double now = state.engine.getLiveBeat();
+    const double end = std::floor (now / bpb + 1e-9) * bpb;
+    const double start = end - bars * bpb;
+    if (end <= 0.0) return 0;
+    const double dest = std::ceil (Model::projectEndBeat (project) / bpb - 1e-9) * bpb;
+    state.beginEdit ("Capture live");
+    int clips = 0;
+    for (int p = 1; p < Live::NumParts; ++p)
+    {
+        auto track = Model::findTrack (project, liveTrackFor (p));
+        if (! track.isValid()) continue;
+        std::vector<NoteData> notes;
+        auto add = [&] (const LiveNote& n)
+        {
+            if (n.part != p || n.start < start - 1e-6 || n.start >= end) return;
+            const double e = n.end < 0 ? end : juce::jmin (end, n.end);
+            NoteData d; d.pitch = n.pitch; d.velocity = n.velocity;
+            d.start = n.start - start; d.length = juce::jmax (1.0 / 64.0, e - n.start);
+            notes.push_back (d);
+        };
+        for (auto& n : history) add (n);
+        for (auto& [k, n] : openNotes) add (n);
+        if (notes.empty()) continue;
+        auto clip = Model::addMidiClip (track, dest, bars * bpb, &state.undo);
+        clip.setProperty (IDs::name, "Live " + Live::partNames()[p], &state.undo);
+        Model::setNotes (clip, notes, &state.undo);
+        ++clips;
+    }
+    return clips;
 }
 
 void Composer::liveTick()

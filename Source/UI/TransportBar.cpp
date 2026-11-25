@@ -3,11 +3,13 @@
 TransportBar::TransportBar (AppState& s) : state (s)
 {
     for (auto* b : { &playBtn, &stopBtn, &recBtn }) addAndMakeVisible (b);
-    addAndMakeVisible (loopBtn);
+    addAndMakeVisible (songBtn);
+    songBtn.setTooltip ("PAT: loop the selected clip.  SONG: play the whole arrangement (loops at the end; drag on the ruler to loop a section).  Key: L");
+    songBtn.onClick = [this] { if (project.isValid()) project.setProperty (IDs::songMode, ! (bool) project.getProperty (IDs::songMode, true), nullptr); };
     addAndMakeVisible (metroBtn);
     playBtn.setColour (juce::TextButton::buttonOnColourId, Theme::good);
     recBtn.setColour (juce::TextButton::buttonOnColourId, Theme::danger);
-    playBtn.onClick = [this] { state.engine.togglePlay(); };
+    playBtn.onClick = [this] { if (state.engine.isPlaying()) state.engine.pause(); else state.engine.play(); };
     stopBtn.onClick = [this] { state.engine.stop(); };
     recBtn.onClick = [this]
     {
@@ -17,8 +19,8 @@ TransportBar::TransportBar (AppState& s) : state (s)
         if (state.engine.isRecordEnabled() && ! anyArmed && state.setStatus)
             state.setStatus ("Record enabled - arm an audio track (R button) to capture input");
     };
-    playBtn.setTooltip ("Play / pause (Space)");
-    stopBtn.setTooltip ("Stop; press again to return to start");
+    playBtn.setTooltip ("Play / stop (Space). Stopping returns to where playback started");
+    stopBtn.setTooltip ("Stop and return to where playback started; press again to go to the start");
     recBtn.setTooltip ("Record-enable: armed audio tracks record the audio input while playing");
 
     tempo.setSliderStyle (juce::Slider::LinearBar);
@@ -61,7 +63,7 @@ void TransportBar::setProject (juce::ValueTree p)
     project = p;
     project.addListener (this);
     tempo.getValueObject().referTo (project.getPropertyAsValue (IDs::tempo, &state.undo));
-    loopBtn.bind (project, IDs::loopOn, &state.undo);
+
     metroBtn.bind (project, IDs::metronome, &state.undo);
     refresh();
 }
@@ -70,11 +72,14 @@ void TransportBar::refresh()
 {
     tsNum.setSelectedId ((int) project.getProperty (IDs::tsNum, 4), juce::dontSendNotification);
     tsDen.setSelectedId ((int) project.getProperty (IDs::tsDen, 4), juce::dontSendNotification);
+    const bool song = (bool) project.getProperty (IDs::songMode, true);
+    songBtn.setButtonText (song ? "SONG" : "PAT");
+    songBtn.setColour (juce::TextButton::buttonColourId, song ? Theme::accent3.withAlpha (0.45f) : Theme::warn.withAlpha (0.45f));
 }
 
 void TransportBar::valueTreePropertyChanged (juce::ValueTree& t, const juce::Identifier& p)
 {
-    if (t == project && (p == IDs::tsNum || p == IDs::tsDen)) refresh();
+    if (t == project && (p == IDs::tsNum || p == IDs::tsDen || p == IDs::songMode)) refresh();
 }
 
 void TransportBar::timerCallback()
@@ -89,6 +94,7 @@ void TransportBar::timerCallback()
     position.setText (juce::String (bar).paddedLeft (' ', 3) + "." + juce::String (b) + "." + juce::String (tick).paddedLeft ('0', 3)
                       + "   " + juce::String ((int) secs / 60) + ":" + juce::String (std::fmod (secs, 60.0), 2).paddedLeft ('0', 5), juce::dontSendNotification);
     playBtn.setToggleState (state.engine.isPlaying(), juce::dontSendNotification);
+    playBtn.setButtonText (state.engine.isPlaying() ? "PAUSE" : "PLAY");
     recBtn.setToggleState (state.engine.isRecordEnabled(), juce::dontSendNotification);
     recBtn.setButtonText (state.engine.isRecording() ? "REC *" : "REC");
     auto* dev = state.engine.getDeviceManager().getCurrentAudioDevice();
@@ -118,7 +124,7 @@ void TransportBar::resized()
     playBtn.setBounds (r.removeFromLeft (64)); r.removeFromLeft (4);
     stopBtn.setBounds (r.removeFromLeft (64)); r.removeFromLeft (4);
     recBtn.setBounds (r.removeFromLeft (64)); r.removeFromLeft (10);
-    loopBtn.setBounds (r.removeFromLeft (56)); r.removeFromLeft (4);
+    songBtn.setBounds (r.removeFromLeft (56)); r.removeFromLeft (4);
     metroBtn.setBounds (r.removeFromLeft (56)); r.removeFromLeft (12);
     position.setBounds (r.removeFromLeft (230)); r.removeFromLeft (10);
     tempo.setBounds (r.removeFromLeft (120)); r.removeFromLeft (8);
