@@ -1,11 +1,12 @@
 #include "LivePage.h"
 #include "../Core/Scales.h"
 #include "../Live/LiveSequencer.h"
+#include "../Audio/SampleLibrary.h"
 
 static juce::Colour partColour (int part)
 {
-    static const juce::uint32 c[] = { 0xff7d869a, 0xffff6b9d, 0xffffc85a, 0xffb38cff, 0xff5ad1ff, 0xff6bffb8 };
-    return juce::Colour (c[juce::jlimit (0, 5, part)]);
+    static const juce::uint32 c[] = { 0xff7d869a, 0xffff6b9d, 0xffffc85a, 0xffb38cff, 0xff5ad1ff, 0xff6bffb8, 0xffff8a5a };
+    return juce::Colour (c[juce::jlimit (0, 6, part)]);
 }
 
 // ============================================================================ note view
@@ -153,17 +154,85 @@ LivePage::LivePage (AppState& s, Composer& c) : state (s), composer (c), canvas 
     info.setFont (Theme::mono (12.0f));
     info.setJustificationType (juce::Justification::topLeft);
     addAndMakeVisible (info);
-    mapping.setFont (Theme::font (11.5f));
-    mapping.setColour (juce::Label::textColourId, Theme::textDim);
-    mapping.setJustificationType (juce::Justification::topLeft);
-    mapping.setText ("Data -> MIDI mapping (always in key):\n"
-                     "pitch     <- orbit angle of z = z^2 + c, snapped to the scale\n"
-                     "velocity  <- orbit radius |z|\n"
-                     "riffs     <- inside a bulb the orbit cycles: period p = p-note riff\n"
-                     "rhythm    <- escape speed, period, edge distance (euclidean)\n"
-                     "harmony   <- orbit sampled once per bar -> chord in the scale\n"
-                     "Click the fractal to move the probe. Wheel = zoom, drag = pan.", juce::dontSendNotification);
-    addAndMakeVisible (mapping);
+    info.setTooltip ("Data -> MIDI (always in key): pitch <- orbit angle of z = z^2 + c snapped to the scale; velocity <- orbit radius; "
+                     "riffs <- the orbit's cycle inside a bulb; rhythm <- escape speed / period / edge distance; harmony <- orbit sampled per bar; "
+                     "lead <- 2-bar phrases (A A' B A''); break <- the break's slices re-ordered by the orbit. Click the fractal to move the probe.");
+
+    // ---- style + sound controls
+    styleBox.addItemList (Model::liveStyleNames(), 1);
+    styleBox.setTooltip ("IDM: glitchy beats + melody.  Ambient: drones, slow pads, bells, a grain cloud, almost no drums.  Breakbeat: a chopped break at 170.");
+    styleBox.onChange = [this]
+    {
+        if (! project.isValid()) return;
+        const int st = styleBox.getSelectedItemIndex();
+        if (st == (int) live.getProperty (IDs::style, 0)) return;
+        state.beginEdit ("Style: " + styleBox.getText());
+        Model::applyLiveStyle (project, st, &state.undo);
+        refreshKitBox();
+        if (state.setStatus) state.setStatus ("Style " + styleBox.getText() + ": tempo, sounds and parts changed - everything is still editable");
+    };
+    styleL.setText ("Style", juce::dontSendNotification);
+    kitL.setText ("Drum kit", juce::dontSendNotification);
+    for (auto* l : { &styleL, &kitL }) { l->setFont (Theme::font (11.0f)); l->setColour (juce::Label::textColourId, Theme::textDim); addAndMakeVisible (l); }
+    tempo.setSliderStyle (juce::Slider::LinearBar);
+    tempo.setRange (40.0, 220.0, 1.0);
+    tempo.setTextValueSuffix (" BPM");
+    tempo.setColour (juce::Slider::trackColourId, Theme::accent.withAlpha (0.25f));
+    tempo.onDragStart = [this] { state.beginEdit ("Tempo"); };
+    kitBox.addItemList (SampleLib::kitNames(), 1);
+    kitBox.setTooltip ("Drum kit for the Drums part. Real samples come from your sample folder (any pack works: files are sorted by name)");
+    kitBox.onChange = [this]
+    {
+        auto t = drumTrack();
+        if (! t.isValid() || kitBox.getText() == t.getProperty (IDs::kit, "Synth").toString()) return;
+        if (kitBox.getText() != "Synth" && SampleLib::get().total() == 0)
+        {
+            if (state.setStatus) state.setStatus ("No samples found in " + SampleLib::get().folder.getFullPathName() + " - press 'Get free drums' or pick your own sample folder");
+            refreshKitBox();
+            return;
+        }
+        state.beginEdit ("Drum kit");
+        Model::applyKit (t, kitBox.getText(), (juce::uint32) juce::Random::getSystemRandom().nextInt (1000), &state.undo);
+    };
+    samplesBtn.setTooltip ("Pick the folder with your drum samples (e.g. your Splice or FL Studio packs). Sub-folders are scanned too");
+    samplesBtn.onClick = [this]
+    {
+        chooser = std::make_unique<juce::FileChooser> ("Choose your drum sample folder", SampleLib::get().folder);
+        chooser->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectDirectories, [this] (const juce::FileChooser& fc)
+        {
+            if (! fc.getResult().isDirectory()) return;
+            SampleLib::setFolder (fc.getResult());
+            if (state.setStatus) state.setStatus ("Found " + juce::String (SampleLib::get().total()) + " drum samples in " + fc.getResult().getFullPathName());
+            if (SampleLib::get().total() > 0 && drumTrack().isValid()) { state.beginEdit ("Drum kit"); Model::applyKit (drumTrack(), kitBox.getText() == "Synth" ? "Studio" : kitBox.getText(), 1, &state.undo); }
+            refreshKitBox();
+        });
+    };
+    downloadBtn.setTooltip ("Downloads ~150 free (CC0 / public domain) drum samples - 808, TR-8, studio and trap kits - into the sample folder (about 5 MB)");
+    downloadBtn.onClick = [this]
+    {
+        downloadBtn.setEnabled (false);
+        const auto folder = SampleLib::get().folder;
+        SampleLib::downloadFreeLibrary (folder,
+            [this] (float p) { downloadBtn.setButtonText ("Downloading " + juce::String ((int) (p * 100)) + "%"); },
+            [this, folder] (bool ok, juce::String msg)
+            {
+                downloadBtn.setEnabled (true);
+                downloadBtn.setButtonText ("Get free drums");
+                if (state.setStatus) state.setStatus (msg);
+                if (! ok) return;
+                SampleLib::setFolder (folder);
+                if (drumTrack().isValid()) { state.beginEdit ("Drum kit"); Model::applyKit (drumTrack(), kitBox.getText() == "Synth" ? "TR-8" : kitBox.getText(), 1, &state.undo); }
+                refreshKitBox();
+            });
+    };
+    swing.slider.setTooltip ("Swing: pushes the off-beat 16ths late");
+    space.slider.setTooltip ("Space: how much reverb the live parts get");
+    repeat.slider.setTooltip ("Repeat: how often the lead comes back to its motif (high = catchy, low = always new)");
+    swing.setColour (Theme::accent2);
+    space.setColour (Theme::good);
+    repeat.setColour (Theme::accent3);
+    for (auto* c : std::initializer_list<juce::Component*> { &styleBox, &kitBox, &tempo, &swing, &space, &repeat, &chordSpeed, &samplesBtn, &downloadBtn })
+        addAndMakeVisible (c);
     refreshMidiOuts();
     startTimerHz (30);
 }
@@ -188,6 +257,28 @@ void LivePage::refreshMidiOuts()
     midiOut.setSelectedId (sel, juce::dontSendNotification);
 }
 
+juce::ValueTree LivePage::drumTrack() const
+{
+    for (auto t : Model::tracks (project))
+        if ((int) t.getProperty (IDs::livePart, 0) == (int) Live::Drums && t[IDs::type].toString() == "drums") return t;
+    return {};
+}
+
+void LivePage::refreshKitBox()
+{
+    const auto k = drumTrack().getProperty (IDs::kit, "Synth").toString();
+    const int i = SampleLib::kitNames().indexOf (k);
+    kitBox.setSelectedItemIndex (juce::jmax (0, i), juce::dontSendNotification);
+    downloadBtn.setVisible (SampleLib::get().total() == 0);
+}
+
+void LivePage::valueTreePropertyChanged (juce::ValueTree& t, const juce::Identifier& p)
+{
+    if (t == live && p == IDs::space) Model::applySpace (project, (float) live.getProperty (IDs::space, 0.35f), nullptr);
+    if (t == live && p == IDs::style) styleBox.setSelectedItemIndex ((int) live.getProperty (IDs::style, 0), juce::dontSendNotification);
+    if (t.hasType (IDs::TRACK) && p == IDs::kit) refreshKitBox();
+}
+
 void LivePage::setProject (juce::ValueTree p)
 {
     if (project.isValid()) project.removeListener (this);
@@ -199,6 +290,13 @@ void LivePage::setProject (juce::ValueTree p)
     scale.bind (live, IDs::scale, &state.undo);
     drift.bind (live, IDs::drift, &state.undo);
     complexity.bind (live, IDs::complexity, &state.undo);
+    swing.bind (live, IDs::swing, &state.undo);
+    space.bind (live, IDs::space, &state.undo);
+    repeat.bind (live, IDs::repeat, &state.undo);
+    chordSpeed.bind (live, IDs::chordSpeed, &state.undo);
+    tempo.getValueObject().referTo (project.getPropertyAsValue (IDs::tempo, &state.undo));
+    styleBox.setSelectedItemIndex ((int) live.getProperty (IDs::style, 0), juce::dontSendNotification);
+    refreshKitBox();
     rows.clear();
     for (auto lp : live)
         if (lp.hasType (IDs::LPART)) addAndMakeVisible (rows.add (new LivePartRow (state, lp, partColour ((int) lp[IDs::id]))));
@@ -251,41 +349,53 @@ void LivePage::paint (juce::Graphics& g)
 {
     g.fillAll (Theme::bg);
     auto r = getLocalBounds().reduced (6);
-    r.removeFromBottom (176);
-    Theme::drawPanel (g, r.removeFromRight (380).toFloat(), "Live");
+    r.removeFromBottom (156);
+    Theme::drawPanel (g, r.removeFromRight (430).toFloat(), "Live");
 }
 
 void LivePage::resized()
 {
     auto r = getLocalBounds().reduced (6);
-    notes.setBounds (r.removeFromBottom (170));
+    notes.setBounds (r.removeFromBottom (150));
     r.removeFromBottom (6);
-    auto side = r.removeFromRight (380).reduced (12, 10);
+    auto side = r.removeFromRight (430).reduced (12, 8);
     r.removeFromRight (6);
     canvas.setBounds (r);
 
     side.removeFromTop (18);
-    auto top = side.removeFromTop (34);
-    playBtn.setBounds (top.removeFromLeft (110)); top.removeFromLeft (6);
-    liveOn.setBounds (top.removeFromLeft (90)); top.removeFromLeft (6);
+    auto top = side.removeFromTop (30);
+    playBtn.setBounds (top.removeFromLeft (100)); top.removeFromLeft (6);
+    liveOn.setBounds (top.removeFromLeft (70)); top.removeFromLeft (6);
     resetView.setBounds (top);
-    side.removeFromTop (8);
-    auto keyRow = side.removeFromTop (44);
-    root.setBounds (keyRow.removeFromLeft (80)); keyRow.removeFromLeft (8);
-    scale.setBounds (keyRow);
-    side.removeFromTop (4);
-    auto knobs = side.removeFromTop (78);
-    drift.setBounds (knobs.removeFromLeft (knobs.getWidth() / 2));
-    complexity.setBounds (knobs);
-    side.removeFromTop (4);
-    for (auto* row : rows) row->setBounds (side.removeFromTop (32));
-    side.removeFromTop (8);
-    midiOut.setBounds (side.removeFromTop (26));
     side.removeFromTop (6);
-    auto cap = side.removeFromTop (28);
+    auto styleRow = side.removeFromTop (26);
+    styleL.setBounds (styleRow.removeFromLeft (38));
+    styleBox.setBounds (styleRow.removeFromLeft (130)); styleRow.removeFromLeft (8);
+    tempo.setBounds (styleRow);
+    side.removeFromTop (4);
+    auto keyRow = side.removeFromTop (42);
+    root.setBounds (keyRow.removeFromLeft (70)); keyRow.removeFromLeft (6);
+    scale.setBounds (keyRow.removeFromLeft (150)); keyRow.removeFromLeft (6);
+    chordSpeed.setBounds (keyRow);
+    side.removeFromTop (2);
+    auto knobs = side.removeFromTop (70);
+    const int kw = knobs.getWidth() / 5;
+    for (auto* k : { &drift, &complexity, &swing, &space, &repeat }) k->setBounds (knobs.removeFromLeft (kw));
+    side.removeFromTop (2);
+    auto kitRow = side.removeFromTop (26);
+    kitL.setBounds (kitRow.removeFromLeft (56));
+    kitBox.setBounds (kitRow.removeFromLeft (110)); kitRow.removeFromLeft (6);
+    samplesBtn.setBounds (kitRow.removeFromLeft (118)); kitRow.removeFromLeft (4);
+    downloadBtn.setBounds (kitRow);
+    side.removeFromTop (6);
+    for (auto* row : rows) row->setBounds (side.removeFromTop (28));
+    side.removeFromTop (6);
+    auto mo = side.removeFromTop (26);
+    midiOut.setBounds (mo);
+    side.removeFromTop (6);
+    auto cap = side.removeFromTop (26);
     capture8.setBounds (cap.removeFromLeft (cap.getWidth() / 2).reduced (2, 0));
     capture16.setBounds (cap.reduced (2, 0));
-    side.removeFromTop (8);
-    info.setBounds (side.removeFromTop (84));
-    mapping.setBounds (side);
+    side.removeFromTop (6);
+    info.setBounds (side);
 }

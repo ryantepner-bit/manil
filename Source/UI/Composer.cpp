@@ -312,8 +312,19 @@ void Composer::liveDriftAndPublish()
         fr.setProperty (IDs::probeX, px, nullptr);
         fr.setProperty (IDs::probeY, py, nullptr);
     }
+    // the Break track's slices (from the engine, which holds the loaded break)
+    Live::BreakInfo bi;
+    const Live::BreakInfo* bip = nullptr;
+    if (auto* tp = state.engine.getTrackProcessor (liveTrackFor (Live::Break)); tp != nullptr && tp->breaks)
+        if (auto d = tp->breaks->getSample())
+        {
+            bi.slicePoints = tp->breaks->getSlices();
+            const double secs = d->numFrames() / juce::jmax (1.0, d->sampleRate);
+            bi.lengthBeats = std::round (secs * (double) tp->breaks->breakBpm.load() / 60.0 * 4.0) / 4.0;   // to the 16th
+            bip = &bi;
+        }
     auto frame = std::make_shared<Live::Frame>();
-    Live::buildFrame (*frame, px, py, pscale, live);
+    Live::buildFrame (*frame, px, py, pscale, live, bip);
     state.engine.getLive().setFrame (frame);
 }
 
