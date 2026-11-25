@@ -523,8 +523,9 @@ PianoRollPage::PianoRollPage (AppState& s) : state (s), grid (s)
             for (auto tr : Model::tracks (state.project)) if (tr[IDs::type].toString() == "synth") { t = tr; break; }
         if (! t.isValid()) return;
         state.beginEdit ("New clip");
-        const double at = std::floor (state.engine.getPosition() / state.beatsPerBar()) * state.beatsPerBar();
-        state.selectClip (Model::addMidiClip (t, at, state.beatsPerBar() * 2, &state.undo));
+        const double bpb = state.beatsPerBar();
+        const double at = Model::freeSpot (t, std::floor (state.engine.getPosition() / bpb) * bpb, bpb * 2, bpb);
+        state.selectClip (Model::addMidiClip (t, at, bpb * 2, &state.undo));
     };
     for (auto* b : { &quantize, &up, &down, &selAll, &del, &human, &leg, &laneMode, &newClip }) addAndMakeVisible (b);
     state.selectionChanged.addChangeListener (this);
