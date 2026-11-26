@@ -1,0 +1,300 @@
+    target_link_libraries(main PRIVATE Vorbis::vorbisenc)
+
+The package libflac provides CMake targets:
+
+    find_package(FLAC CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE FLAC::FLAC)
+    
+    # Or use the C++ API
+    find_package(FLAC CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE FLAC::FLAC++)
+
+libsndfile provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(SndFile CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE SndFile::sndfile)
+
+libsndfile provides pkg-config modules:
+
+  # A library for reading and writing audio files
+  sndfile
+
+fluidsynth provides CMake targets:
+
+  find_package(FluidSynth CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE FluidSynth::libfluidsynth)
+  add_custom_command(OUTPUT result COMMAND FluidSynth::fluidsynth ARGS ...)
+
+fluidsynth provides pkg-config modules:
+
+  # Software SoundFont synth
+  fluidsynth
+
+libsamplerate provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(SampleRate CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE SampleRate::samplerate)
+
+libsamplerate provides pkg-config modules:
+
+  # An audio Sample Rate Conversion library
+  samplerate
+
+libstk provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(unofficial-libstk CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE unofficial::libstk::libstk)
+
+lilv provides pkg-config modules:
+
+  # Library for hosting LV2 plugins
+  lilv-0
+
+portaudio provides CMake targets:
+
+  # this is heuristically generated, and may not be correct
+  find_package(portaudio CONFIG REQUIRED)
+  target_link_libraries(main PRIVATE portaudio_static)
+
+portaudio provides pkg-config modules:
+
+  # Portable audio I/O
+  portaudio-2.0
+
+sdl2 provides CMake targets:
+
+    find_package(SDL2 CONFIG REQUIRED)
+    target_link_libraries(main
+        PRIVATE
+        $<TARGET_NAME_IF_EXISTS:SDL2::SDL2main>
+        $<IF:$<TARGET_EXISTS:SDL2::SDL2>,SDL2::SDL2,SDL2::SDL2-static>
+    )
+
+All requested installations completed successfully in: 515 us
+-- Running vcpkg install - done
+-- The C compiler identification is GNU 13.0.0
+-- The CXX compiler identification is GNU 13.0.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /bin/x86_64-w64-mingw32-gcc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /bin/x86_64-w64-mingw32-g++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+
+Checking submodules...
+-- Checking qt5-x11embed...
+--   Found src/3rdparty/qt5-x11embed/CMakeLists.txt
+-- Checking zynaddsubfx...
+--   Found plugins/ZynAddSubFx/zynaddsubfx/CMakeLists.txt
+-- Checking game-music-emu...
+--   Found plugins/FreeBoy/game-music-emu/CMakeLists.txt
+-- Checking adplug...
+--   Found plugins/OpulenZ/adplug/Makefile.am
+-- Checking veal...
+--   Found plugins/LadspaEffect/calf/veal/CMakeLists.txt
+-- Checking exprtk...
+--   Found plugins/Xpressive/exprtk/Makefile
+-- Checking ladspa...
+--   Found plugins/LadspaEffect/swh/ladspa/Makefile.am
+-- Checking tap-plugins...
+--   Found plugins/LadspaEffect/tap/tap-plugins/Makefile
+-- Checking weakjack...
+--   Found src/3rdparty/weakjack/weakjack/.gitignore
+-- Checking wiki...
+--   Found doc/wiki/Home.md
+-- Checking ringbuffer...
+--   Found src/3rdparty/ringbuffer/CMakeLists.txt
+-- Checking carla...
+--   Found plugins/CarlaBase/carla/Makefile
+-- Checking resid...
+--   Found plugins/Sid/resid/resid/Makefile.am
+-- Checking jack2...
+--   Found src/3rdparty/jack2/.gitignore
+-- Checking cmt...
+--   Found plugins/LadspaEffect/cmt/cmt/.gitignore
+-- Checking hiir...
+--   Found src/3rdparty/hiir/hiir/license.txt
+-- Checking portsmf...
+--   Found plugins/MidiImport/portsmf/CMakeLists.txt
+-- Done validating submodules.
+
+-- Found PkgConfig: /usr/bin/x86_64-w64-mingw32-pkg-config (found version "2.5.1")
+-- Found Git: /bin/git (found version "2.56.1")
+
+Configuring MANDELBROT
+--------------------------
+* Project version             : 1.3.0
+*   Major version             : 1
+*   Minor version             : 3
+*   Release version           : 0
+*   Stage version             : 
+*   Build version             : 0
+*
+
+Optional Version Usage:
+--------------------------
+*   Override version:           -DFORCE_VERSION=x.x.x-x
+*   Ignore Git information:     -DFORCE_VERSION=internal
+
+PROCESSOR: x86_64
+-- Target host is 64 bit, Intel
+-- Setting target microarchitecture to 'official'
+-- Looking for include file pthread.h
+-- Looking for include file pthread.h - found
+-- Looking for include file semaphore.h
+-- Looking for include file semaphore.h - found
+-- Looking for include file unistd.h
+-- Looking for include file unistd.h - found
+-- Looking for include file sys/ipc.h
+-- Looking for include file sys/ipc.h - not found
+-- Looking for include file sys/times.h
+-- Looking for include file sys/times.h - not found
+-- Looking for include file sys/prctl.h
+-- Looking for include file sys/prctl.h - not found
+-- Looking for include file sched.h
+-- Looking for include file sched.h - found
+-- Looking for include file sys/soundcard.h
+-- Looking for include file sys/soundcard.h - not found
+-- Looking for include file soundcard.h
+-- Looking for include file soundcard.h - not found
+-- Looking for include file fcntl.h
+-- Looking for include file fcntl.h - found
+-- Looking for include file sys/ioctl.h
+-- Looking for include file sys/ioctl.h - not found
+-- Looking for include file process.h
+-- Looking for include file process.h - found
+-- Looking for shm_open in rt
+-- Looking for shm_open in rt - not found
+-- Using Qt version: 5.15.6
+-- Found SndFile: /home/runner/work/manil/manil/build/vcpkg_installed/x64-mingw-static/debug/lib/libsndfile.a (found version "1.2.2")
+-- Performing Test LMMS_HAVE_SF_COMPLEVEL
+-- Performing Test LMMS_HAVE_SF_COMPLEVEL - Failed
+-- Found Perl: /bin/perl (found version "5.40.1")
+-- Found Lilv: /home/runner/work/manil/manil/build/vcpkg_installed/x64-mingw-static/lib/liblilv-0.a (found version "0.28.0")
+-- Checking for module 'suil-0'
+--   Package 'suil-0' not found
+-- Checking for module 'carla-native-plugin'
+--   Package 'carla-native-plugin' not found
+-- Checking for module 'carla-standalone>=1.9.5'
+--   Package 'carla-standalone' not found
+-- Found SDL2: /home/runner/work/manil/manil/build/vcpkg_installed/x64-mingw-static/debug/lib/libSDL2d.a (found version "2.32.10")
+-- Found STK: /home/runner/work/manil/manil/build/vcpkg_installed/x64-mingw-static/debug/lib/liblibstk.a
+-- Found Portaudio: /home/runner/work/manil/manil/build/vcpkg_installed/x64-mingw-static/lib/libportaudio.a (found version "19")
+mp3lame::mp3lame was found but the version could not be determined automatically.
+Set the cache variable `Lame_VERSION` to the version you have installed.
+-- Found Lame: /home/runner/work/manil/manil/build/vcpkg_installed/x64-mingw-static/lib/libmp3lame.a
+-- Found OggVorbis: /home/runner/work/manil/manil/build/vcpkg_installed/x64-mingw-static/debug/lib/libogg.a (found version "1.3.7")
+-- Found FFTW: /home/runner/work/manil/manil/build/vcpkg_installed/x64-mingw-static/include
+-- Found FLTK: /home/runner/work/manil/manil/build/vcpkg_installed/x64-mingw-static/lib/libfltk.a
+-- Checking for module 'fluidsynth'
+--   Found fluidsynth, version 2.6.2
+-- Found FluidSynth: /home/runner/work/manil/manil/build/vcpkg_installed/x64-mingw-static/lib/libfluidsynth-3.a (found suitable version "2.6.2", minimum required is "2.2.0")
+-- Checking for module 'gig'
+--   Found gig, version 4.0.0
+-- Found Samplerate: /home/runner/work/manil/manil/build/vcpkg_installed/x64-mingw-static/debug/lib/libsamplerate.a (found suitable version "0.2.2", minimum required is "0.1.8")
+-- Using Git to generate the CONTRIBUTORS file
+-- Using /bin/ccache for compiler caching
+-- Looking for include file sys/mman.h
+-- Looking for include file sys/mman.h - not found
+-- Performing Test COMPILER_HAS_DEPRECATED_ATTR
+-- Performing Test COMPILER_HAS_DEPRECATED_ATTR - Success
+CMake Warning (author) at /usr/local/share/cmake-4.5/Modules/ExternalProject.cmake:2688 (message):
+  Policy CMP0225 is not set: ExternalProject sets CMAKE_INSTALL_PREFIX to
+  <INSTALL_DIR> in the default configure command.  Run "cmake --help-policy
+  CMP0225" for policy details.  Use the cmake_policy command to set the
+  policy and suppress this warning.
+
+  ExternalProject_Add(RemoteVstPlugin32) uses the default configure command
+  without a CMAKE_INSTALL_PREFIX.  The OLD behavior leaves the external
+  project's install prefix at the CMake default; the NEW behavior sets it to
+  <INSTALL_DIR>.
+Call Stack (most recent call first):
+  /usr/local/share/cmake-4.5/Modules/ExternalProject.cmake:2833 (_ep_extract_configure_command)
+  /usr/local/share/cmake-4.5/Modules/ExternalProject.cmake:3316 (_ep_add_configure_command)
+  plugins/VstBase/RemoteVstPlugin32.cmake:42 (ExternalProject_Add)
+  plugins/VstBase/CMakeLists.txt:52 (INCLUDE)
+This warning is for project developers.  Use -Wno-author to suppress it.
+
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+-- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+-- Found Threads: TRUE
+-- Found ZLIB: optimized;/home/runner/work/manil/manil/build/vcpkg_installed/x64-mingw-static/lib/libzs.a;debug;/home/runner/work/manil/manil/build/vcpkg_installed/x64-mingw-static/debug/lib/libzsd.a (found version "1.4")
+
+Installation Summary
+--------------------
+* Install Directory           : /usr/local
+
+Supported audio interfaces
+--------------------------
+* ALSA                        : <not supported on this platform>
+* JACK                        : OK (weak linking enabled)
+* Sndio                       : <not supported on this platform>
+* PortAudio                   : OK
+* PulseAudio                  : <not supported on this platform>
+* SDL                         : OK
+
+Supported MIDI interfaces
+-------------------------
+* ALSA                        : <not supported on this platform>
+* Sndio                       : <not supported on this platform>
+* JACK                        : OK (weak linking enabled)
+* WinMM                       : OK
+* AppleMidi                   : <not supported on this platform>
+
+Supported file formats for project export
+-----------------------------------------
+* WAVE                        : OK
+* FLAC                        : OK
+* OGG/VORBIS                  : OK
+* MP3/Lame                    : OK
+
+Optional plugins
+----------------
+* Lv2 plugins                 : OK
+* SUIL for plugin UIs         : not found, install it or set PKG_CONFIG_PATH appropriately
+* ZynAddSubFX instrument      : OK
+* Carla Patchbay & Rack       : OK (weak linking enabled)
+* SoundFont2 player           : OK
+* Sid instrument              : OK
+* Stk Mallets                 : OK
+* VST plugin host             : OK
+  * 32-bit Windows host       : OK
+  * 64-bit Windows host       : OK
+* CALF LADSPA plugins         : OK
+* CAPS LADSPA plugins         : OK
+* CMT LADSPA plugins          : OK
+* TAP LADSPA plugins          : OK
+* SWH LADSPA plugins          : OK
+* GIG player                  : OK
+
+Developer options
+-----------------------------------------
+* Debug FP exceptions               : Disabled
+* Debug using AddressSanitizer      : Disabled
+* Debug using ThreadSanitizer       : Disabled
+* Debug using MemorySanitizer       : Disabled
+* Debug using UBSanitizer           : Disabled
+* Debug packaging commands          : Disabled
+* Profile using GNU profiler        : Disabled 
+* Debug assertions                  : Disabled
+* Experimental Qt6 support          : Disabled
+
+
+-----------------------------------------------------------------
+IMPORTANT:
+after installing missing packages, remove CMakeCache.txt before
+running cmake again!
+-----------------------------------------------------------------
+
+
+
+-- Configuring done (10.2s)
+-- Generating done (1.3s)
+-- Build files have been written to: /home/runner/work/manil/manil/build

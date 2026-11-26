@@ -1,0 +1,300 @@
+[ 86%] Building CXX object plugins/Nes/CMakeFiles/nes.dir/qrc_nes.cpp.obj
+[ 87%] Building CXX object plugins/Oscilloscope/CMakeFiles/oscilloscope.dir/OscilloscopeGraph.cpp.obj
+[ 87%] Building CXX object plugins/Oscilloscope/CMakeFiles/oscilloscope.dir/moc_OscilloscopeControls.cpp.obj
+[ 87%] Building CXX object plugins/Oscilloscope/CMakeFiles/oscilloscope.dir/moc_OscilloscopeControlDialog.cpp.obj
+[ 87%] Building CXX object plugins/Oscilloscope/CMakeFiles/oscilloscope.dir/moc_OscilloscopeGraph.cpp.obj
+[ 87%] Linking CXX shared module ../nes.dll
+[ 87%] Built target nes
+[ 87%] Generating freeboy.qrc
+[ 87%] Linking CXX shared module ../oscilloscope.dll
+[ 87%] Built target oscilloscope
+[ 87%] Building CXX object plugins/OpulenZ/CMakeFiles/opulenz.dir/moc_OpulenZ.cpp.obj
+[ 87%] Generating moc_FreeBoy.cpp
+[ 87%] Generating qrc_freeboy.cpp
+[ 86%] Building CXX object plugins/OpulenZ/CMakeFiles/opulenz.dir/OpulenZ.cpp.obj
+[ 87%] Building CXX object plugins/FreeBoy/CMakeFiles/freeboy.dir/GbApuWrapper.cpp.obj
+[ 87%] Building CXX object plugins/FreeBoy/CMakeFiles/freeboy.dir/moc_FreeBoy.cpp.obj
+[ 87%] Building CXX object plugins/Organic/CMakeFiles/organic.dir/moc_Organic.cpp.obj
+[ 87%] Building CXX object plugins/Organic/CMakeFiles/organic.dir/qrc_organic.cpp.obj
+[ 87%] Generating patman.qrc
+[ 87%] Building CXX object plugins/OpulenZ/CMakeFiles/opulenz.dir/qrc_opulenz.cpp.obj
+[ 87%] Generating moc_Patman.cpp
+[ 87%] Generating qrc_patman.cpp
+[ 87%] Linking CXX shared module ../opulenz.dll
+[ 87%] Built target opulenz
+[ 87%] Building CXX object plugins/FreeBoy/CMakeFiles/freeboy.dir/qrc_freeboy.cpp.obj
+[ 87%] Building CXX object plugins/Patman/CMakeFiles/patman.dir/moc_Patman.cpp.obj
+[ 87%] Generating peakcontrollereffect.qrc
+[ 87%] Generating moc_PeakControllerEffectControlDialog.cpp
+[ 87%] Generating moc_PeakControllerEffectControls.cpp
+[ 87%] Generating qrc_peakcontrollereffect.cpp
+[ 86%] Building CXX object plugins/Organic/CMakeFiles/organic.dir/Organic.cpp.obj
+[ 87%] Linking CXX shared module ../organic.dll
+[ 87%] Built target organic
+[ 87%] Built target gigplayer_autogen_timestamp_deps
+[ 87%] Generating reverbsc.qrc
+[ 87%] Generating moc_ReverbSCControlDialog.cpp
+[ 87%] Generating moc_ReverbSCControls.cpp
+[ 87%] Generating qrc_reverbsc.cpp
+[ 87%] Building CXX object plugins/ReverbSC/CMakeFiles/reverbsc.dir/ReverbSC.cpp.obj
+[ 88%] Building CXX object plugins/ReverbSC/CMakeFiles/reverbsc.dir/ReverbSCControls.cpp.obj
+[ 88%] Building CXX object plugins/ReverbSC/CMakeFiles/reverbsc.dir/ReverbSCControlDialog.cpp.obj
+[ 88%] Building C object plugins/ReverbSC/CMakeFiles/reverbsc.dir/base.c.obj
+[ 88%] Building C object plugins/ReverbSC/CMakeFiles/reverbsc.dir/revsc.c.obj
+[ 88%] Building C object plugins/ReverbSC/CMakeFiles/reverbsc.dir/dcblock.c.obj
+[ 88%] Building CXX object plugins/ReverbSC/CMakeFiles/reverbsc.dir/moc_ReverbSCControls.cpp.obj
+[ 88%] Building CXX object plugins/ReverbSC/CMakeFiles/reverbsc.dir/moc_ReverbSCControlDialog.cpp.obj
+[ 88%] Building CXX object plugins/ReverbSC/CMakeFiles/reverbsc.dir/qrc_reverbsc.cpp.obj
+[ 88%] Linking CXX shared module ../reverbsc.dll
+[ 88%] Built target reverbsc
+[ 89%] Building CXX object plugins/Patman/CMakeFiles/patman.dir/qrc_patman.cpp.obj
+[ 87%] Building CXX object plugins/PeakControllerEffect/CMakeFiles/peakcontrollereffect.dir/PeakControllerEffect.cpp.obj
+[ 89%] Building CXX object plugins/PeakControllerEffect/CMakeFiles/peakcontrollereffect.dir/PeakControllerEffectControlDialog.cpp.obj
+[ 89%] Building CXX object plugins/PeakControllerEffect/CMakeFiles/peakcontrollereffect.dir/moc_PeakControllerEffectControls.cpp.obj
+[ 89%] Built target sf2player_autogen_timestamp_deps
+[ 89%] Generating sfxr.qrc
+[ 89%] Generating moc_Sfxr.cpp
+[ 89%] Generating qrc_sfxr.cpp
+[ 87%] Building CXX object plugins/FreeBoy/CMakeFiles/freeboy.dir/FreeBoy.cpp.obj
+[ 89%] Building CXX object plugins/PeakControllerEffect/CMakeFiles/peakcontrollereffect.dir/PeakControllerEffectControls.cpp.obj
+[ 89%] Building CXX object plugins/PeakControllerEffect/CMakeFiles/peakcontrollereffect.dir/moc_PeakControllerEffectControlDialog.cpp.obj
+[ 89%] Building CXX object plugins/PeakControllerEffect/CMakeFiles/peakcontrollereffect.dir/qrc_peakcontrollereffect.cpp.obj
+[ 89%] Linking CXX shared module ../freeboy.dll
+[ 89%] Built target freeboy
+[ 90%] Generating sid.qrc
+[ 90%] Generating moc_SidInstrument.cpp
+[ 90%] Generating qrc_sid.cpp
+[ 89%] Linking CXX shared module ../peakcontrollereffect.dll
+[ 90%] Built target peakcontrollereffect
+[ 90%] Generating slewdistortion.qrc
+[ 87%] Building CXX object plugins/Patman/CMakeFiles/patman.dir/Patman.cpp.obj
+[ 90%] Generating moc_SlewDistortion.cpp
+[ 90%] Generating moc_SlewDistortionControlDialog.cpp
+[ 90%] Generating moc_SlewDistortionControls.cpp
+[ 90%] Generating qrc_slewdistortion.cpp
+[ 90%] Linking CXX shared module ../patman.dll
+[ 90%] Built target patman
+[ 90%] Generating slicert.qrc
+[ 90%] Building CXX object plugins/SlewDistortion/CMakeFiles/slewdistortion.dir/SlewDistortion.cpp.obj
+[ 91%] Building CXX object plugins/SlewDistortion/CMakeFiles/slewdistortion.dir/SlewDistortionControls.cpp.obj
+[ 91%] Building CXX object plugins/SlewDistortion/CMakeFiles/slewdistortion.dir/SlewDistortionControlDialog.cpp.obj
+[ 91%] Building CXX object plugins/SlewDistortion/CMakeFiles/slewdistortion.dir/moc_SlewDistortion.cpp.obj
+[ 91%] Building CXX object plugins/SlewDistortion/CMakeFiles/slewdistortion.dir/moc_SlewDistortionControls.cpp.obj
+[ 91%] Building CXX object plugins/SlewDistortion/CMakeFiles/slewdistortion.dir/moc_SlewDistortionControlDialog.cpp.obj
+[ 91%] Generating moc_SlicerT.cpp
+[ 91%] Generating moc_SlicerTView.cpp
+[ 91%] Generating moc_SlicerTWaveform.cpp
+[ 91%] Generating qrc_slicert.cpp
+[ 91%] Building CXX object plugins/SlewDistortion/CMakeFiles/slewdistortion.dir/qrc_slewdistortion.cpp.obj
+[ 91%] Linking CXX shared module ../slewdistortion.dll
+[ 91%] Built target slewdistortion
+[ 91%] Building CXX object plugins/Sfxr/CMakeFiles/sfxr.dir/moc_Sfxr.cpp.obj
+[ 91%] Building CXX object plugins/SlicerT/CMakeFiles/slicert.dir/SlicerTView.cpp.obj
+[ 91%] Generating analyzer.qrc
+[ 91%] Generating moc_DataprocLauncher.cpp
+/home/runner/work/manil/manil/src/plugins/SpectrumAnalyzer/DataprocLauncher.h:0: Note: No relevant classes found. No output generated.
+[ 91%] Generating moc_SaControls.cpp
+[ 91%] Generating moc_SaControlsDialog.cpp
+[ 91%] Generating moc_SaProcessor.cpp
+/home/runner/work/manil/manil/src/plugins/SpectrumAnalyzer/SaProcessor.h:0: Note: No relevant classes found. No output generated.
+[ 92%] Generating moc_SaSpectrumView.cpp
+[ 92%] Generating moc_SaWaterfallView.cpp
+[ 92%] Generating qrc_analyzer.cpp
+[ 92%] Building CXX object plugins/SpectrumAnalyzer/CMakeFiles/analyzer.dir/Analyzer.cpp.obj
+[ 92%] Building CXX object plugins/SpectrumAnalyzer/CMakeFiles/analyzer.dir/SaProcessor.cpp.obj
+[ 92%] Building CXX object plugins/SpectrumAnalyzer/CMakeFiles/analyzer.dir/SaControls.cpp.obj
+[ 92%] Building CXX object plugins/SpectrumAnalyzer/CMakeFiles/analyzer.dir/SaControlsDialog.cpp.obj
+[ 92%] Building CXX object plugins/SpectrumAnalyzer/CMakeFiles/analyzer.dir/SaSpectrumView.cpp.obj
+[ 92%] Building CXX object plugins/SpectrumAnalyzer/CMakeFiles/analyzer.dir/SaWaterfallView.cpp.obj
+[ 92%] Building CXX object plugins/SpectrumAnalyzer/CMakeFiles/analyzer.dir/moc_SaProcessor.cpp.obj
+[ 92%] Building CXX object plugins/SpectrumAnalyzer/CMakeFiles/analyzer.dir/moc_SaControls.cpp.obj
+[ 92%] Building CXX object plugins/SpectrumAnalyzer/CMakeFiles/analyzer.dir/moc_SaControlsDialog.cpp.obj
+[ 92%] Building CXX object plugins/SpectrumAnalyzer/CMakeFiles/analyzer.dir/moc_SaSpectrumView.cpp.obj
+[ 92%] Building CXX object plugins/SpectrumAnalyzer/CMakeFiles/analyzer.dir/moc_SaWaterfallView.cpp.obj
+[ 93%] Building CXX object plugins/SpectrumAnalyzer/CMakeFiles/analyzer.dir/moc_DataprocLauncher.cpp.obj
+[ 93%] Building CXX object plugins/SpectrumAnalyzer/CMakeFiles/analyzer.dir/qrc_analyzer.cpp.obj
+[ 93%] Linking CXX shared module ../analyzer.dll
+[ 93%] Built target analyzer
+[ 93%] Generating moc_StereoEnhancerControls.cpp
+[ 93%] Generating moc_StereoEnhancerControlDialog.cpp
+[ 93%] Building CXX object plugins/StereoEnhancer/CMakeFiles/stereoenhancer.dir/StereoEnhancer.cpp.obj
+[ 93%] Building CXX object plugins/StereoEnhancer/CMakeFiles/stereoenhancer.dir/StereoEnhancerControls.cpp.obj
+[ 93%] Building CXX object plugins/StereoEnhancer/CMakeFiles/stereoenhancer.dir/StereoEnhancerControlDialog.cpp.obj
+[ 93%] Building CXX object plugins/StereoEnhancer/CMakeFiles/stereoenhancer.dir/moc_StereoEnhancerControls.cpp.obj
+[ 93%] Building CXX object plugins/StereoEnhancer/CMakeFiles/stereoenhancer.dir/moc_StereoEnhancerControlDialog.cpp.obj
+[ 93%] Linking CXX shared module ../stereoenhancer.dll
+[ 93%] Built target stereoenhancer
+[ 93%] Generating stereomatrix.qrc
+[ 93%] Generating moc_StereoMatrixControlDialog.cpp
+[ 94%] Generating moc_StereoMatrixControls.cpp
+[ 94%] Generating qrc_stereomatrix.cpp
+[ 94%] Building CXX object plugins/StereoMatrix/CMakeFiles/stereomatrix.dir/StereoMatrix.cpp.obj
+[ 94%] Building CXX object plugins/StereoMatrix/CMakeFiles/stereomatrix.dir/StereoMatrixControls.cpp.obj
+[ 94%] Building CXX object plugins/StereoMatrix/CMakeFiles/stereomatrix.dir/StereoMatrixControlDialog.cpp.obj
+[ 94%] Building CXX object plugins/StereoMatrix/CMakeFiles/stereomatrix.dir/moc_StereoMatrixControls.cpp.obj
+[ 94%] Building CXX object plugins/StereoMatrix/CMakeFiles/stereomatrix.dir/moc_StereoMatrixControlDialog.cpp.obj
+[ 94%] Building CXX object plugins/StereoMatrix/CMakeFiles/stereomatrix.dir/qrc_stereomatrix.cpp.obj
+[ 94%] Linking CXX shared module ../stereomatrix.dll
+[ 94%] Built target stereomatrix
+[ 94%] Generating malletsstk.qrc
+[ 94%] Generating moc_Mallets.cpp
+[ 94%] Generating qrc_malletsstk.cpp
+[ 89%] Building CXX object plugins/Sfxr/CMakeFiles/sfxr.dir/Sfxr.cpp.obj
+[ 94%] Building CXX object plugins/Sfxr/CMakeFiles/sfxr.dir/qrc_sfxr.cpp.obj
+[ 94%] Linking CXX shared module ../sfxr.dll
+[ 94%] Built target sfxr
+[ 94%] Building CXX object plugins/Stk/Mallets/CMakeFiles/malletsstk.dir/moc_Mallets.cpp.obj
+[ 94%] Building CXX object plugins/Sid/CMakeFiles/sid.dir/moc_SidInstrument.cpp.obj
+[ 94%] Building CXX object plugins/Sid/CMakeFiles/sid.dir/qrc_sid.cpp.obj
+[ 94%] Building CXX object plugins/SlicerT/CMakeFiles/slicert.dir/SlicerTWaveform.cpp.obj
+[ 95%] Building CXX object plugins/Stk/Mallets/CMakeFiles/malletsstk.dir/qrc_malletsstk.cpp.obj
+[ 95%] Generating taptempo.qrc
+[ 95%] Generating moc_TapTempo.cpp
+[ 95%] Generating moc_TapTempoView.cpp
+[ 95%] Generating qrc_taptempo.cpp
+[ 91%] Building CXX object plugins/SlicerT/CMakeFiles/slicert.dir/SlicerT.cpp.obj
+[ 95%] Building CXX object plugins/SlicerT/CMakeFiles/slicert.dir/moc_SlicerT.cpp.obj
+[ 95%] Building CXX object plugins/SlicerT/CMakeFiles/slicert.dir/moc_SlicerTView.cpp.obj
+[ 95%] Building CXX object plugins/SlicerT/CMakeFiles/slicert.dir/moc_SlicerTWaveform.cpp.obj
+[ 95%] Building CXX object plugins/SlicerT/CMakeFiles/slicert.dir/qrc_slicert.cpp.obj
+[ 90%] Building CXX object plugins/Sid/CMakeFiles/sid.dir/SidInstrument.cpp.obj
+[ 95%] Linking CXX shared module ../sid.dll
+[ 95%] Built target sid
+[ 95%] Generating __/moc_VstPlugin.cpp
+[ 95%] Linking CXX shared module ../slicert.dll
+[ 95%] Built target slicert
+[ 95%] Building CXX object plugins/VstBase/vstbase/CMakeFiles/vstbase.dir/__/vst_base.cpp.obj
+[ 95%] Building CXX object plugins/VstBase/vstbase/CMakeFiles/vstbase.dir/__/moc_VstPlugin.cpp.obj
+[ 96%] Building CXX object plugins/TapTempo/CMakeFiles/taptempo.dir/TapTempoView.cpp.obj
+[ 96%] Building CXX object plugins/TapTempo/CMakeFiles/taptempo.dir/moc_TapTempo.cpp.obj
+[ 96%] Building CXX object plugins/TapTempo/CMakeFiles/taptempo.dir/moc_TapTempoView.cpp.obj
+[ 96%] Building CXX object plugins/TapTempo/CMakeFiles/taptempo.dir/qrc_taptempo.cpp.obj
+[ 96%] Generating watsyn.qrc
+[ 96%] Generating moc_Watsyn.cpp
+[ 96%] Generating qrc_watsyn.cpp
+[ 94%] Building CXX object plugins/Stk/Mallets/CMakeFiles/malletsstk.dir/Mallets.cpp.obj
+[ 96%] Linking CXX shared module ../../malletsstk.dll
+[ 96%] Built target malletsstk
+[ 96%] Generating waveshaper.qrc
+[ 96%] Generating moc_WaveShaperControlDialog.cpp
+[ 96%] Generating moc_WaveShaperControls.cpp
+[ 96%] Generating qrc_waveshaper.cpp
+[ 96%] Building CXX object plugins/WaveShaper/CMakeFiles/waveshaper.dir/WaveShaper.cpp.obj
+[ 95%] Building CXX object plugins/TapTempo/CMakeFiles/taptempo.dir/TapTempo.cpp.obj
+[ 96%] Linking CXX shared module ../taptempo.dll
+[ 96%] Built target taptempo
+[ 96%] Building CXX object plugins/Watsyn/CMakeFiles/watsyn.dir/moc_Watsyn.cpp.obj
+[ 96%] Building CXX object plugins/Watsyn/CMakeFiles/watsyn.dir/qrc_watsyn.cpp.obj
+[ 96%] Building CXX object plugins/WaveShaper/CMakeFiles/waveshaper.dir/WaveShaperControlDialog.cpp.obj
+[ 96%] Building CXX object plugins/WaveShaper/CMakeFiles/waveshaper.dir/moc_WaveShaperControls.cpp.obj
+[ 96%] Building CXX object plugins/WaveShaper/CMakeFiles/waveshaper.dir/moc_WaveShaperControlDialog.cpp.obj
+[ 96%] Generating moc_VectorView.cpp
+[ 96%] Generating moc_VecControls.cpp
+[ 96%] Generating moc_VecControlsDialog.cpp
+[ 96%] Building CXX object plugins/Vectorscope/CMakeFiles/vectorscope.dir/Vectorscope.cpp.obj
+[ 96%] Building CXX object plugins/Vectorscope/CMakeFiles/vectorscope.dir/VecControls.cpp.obj
+[ 96%] Building CXX object plugins/Vectorscope/CMakeFiles/vectorscope.dir/VecControlsDialog.cpp.obj
+[ 96%] Building CXX object plugins/Vectorscope/CMakeFiles/vectorscope.dir/VectorView.cpp.obj
+[ 96%] Building CXX object plugins/Vectorscope/CMakeFiles/vectorscope.dir/moc_VecControls.cpp.obj
+[ 96%] Building CXX object plugins/Vectorscope/CMakeFiles/vectorscope.dir/moc_VecControlsDialog.cpp.obj
+[ 96%] Building CXX object plugins/Vectorscope/CMakeFiles/vectorscope.dir/moc_VectorView.cpp.obj
+[ 96%] Linking CXX shared module ../vectorscope.dll
+[ 96%] Built target vectorscope
+[ 96%] Generating vibedstrings.qrc
+[ 96%] Generating moc_NineButtonSelector.cpp
+[ 96%] Generating moc_Vibed.cpp
+[ 96%] Generating qrc_vibedstrings.cpp
+[ 96%] Building CXX object plugins/WaveShaper/CMakeFiles/waveshaper.dir/WaveShaperControls.cpp.obj
+[ 96%] Building CXX object plugins/WaveShaper/CMakeFiles/waveshaper.dir/qrc_waveshaper.cpp.obj
+[ 96%] Linking CXX shared module ../waveshaper.dll
+[ 96%] Built target waveshaper
+[ 96%] Generating xpressive.qrc
+[ 96%] Generating moc_Xpressive.cpp
+[ 96%] Generating qrc_xpressive.cpp
+[ 96%] Building CXX object plugins/Watsyn/CMakeFiles/watsyn.dir/Watsyn.cpp.obj
+[ 96%] Linking CXX shared module ../watsyn.dll
+[ 96%] Built target watsyn
+[ 96%] Building CXX object plugins/Vibed/CMakeFiles/vibedstrings.dir/NineButtonSelector.cpp.obj
+[ 96%] Building CXX object plugins/Vibed/CMakeFiles/vibedstrings.dir/VibratingString.cpp.obj
+[ 96%] Building CXX object plugins/Vibed/CMakeFiles/vibedstrings.dir/moc_Vibed.cpp.obj
+[ 96%] Building CXX object plugins/Xpressive/CMakeFiles/xpressive.dir/ExprSynth.cpp.obj
+[ 96%] Building CXX object plugins/Xpressive/CMakeFiles/xpressive.dir/moc_Xpressive.cpp.obj
+[ 96%] Building CXX object plugins/Xpressive/CMakeFiles/xpressive.dir/qrc_xpressive.cpp.obj
+[ 97%] Generating zynaddsubfx.qrc
+[ 97%] Generating moc_ZynAddSubFx.cpp
+[ 97%] Generating qrc_zynaddsubfx.cpp
+[ 95%] Building CXX object plugins/VstBase/vstbase/CMakeFiles/vstbase.dir/__/VstPlugin.cpp.obj
+[ 97%] Linking CXX shared library ../../vstbase.dll
+[ 97%] Built target vstbase
+[ 97%] Generating carlapatchbay.qrc
+[ 97%] Generating qrc_carlapatchbay.cpp
+[ 96%] Building CXX object plugins/Vibed/CMakeFiles/vibedstrings.dir/Vibed.cpp.obj
+[ 97%] Building CXX object plugins/Vibed/CMakeFiles/vibedstrings.dir/moc_NineButtonSelector.cpp.obj
+[ 97%] Building CXX object plugins/Vibed/CMakeFiles/vibedstrings.dir/qrc_vibedstrings.cpp.obj
+[ 97%] Linking CXX shared module ../vibedstrings.dll
+[ 97%] Built target vibedstrings
+[ 97%] Generating carlarack.qrc
+[ 97%] Generating qrc_carlarack.cpp
+[ 96%] Building CXX object plugins/Xpressive/CMakeFiles/xpressive.dir/Xpressive.cpp.obj
+[ 97%] Building CXX object plugins/CarlaPatchbay/CMakeFiles/carlapatchbay.dir/CarlaPatchbay.cpp.obj
+[ 97%] Building CXX object plugins/CarlaPatchbay/CMakeFiles/carlapatchbay.dir/qrc_carlapatchbay.cpp.obj
+[ 97%] Building CXX object plugins/ZynAddSubFx/CMakeFiles/zynaddsubfx.dir/ZynAddSubFx.cpp.obj
+[ 97%] Building CXX object plugins/ZynAddSubFx/CMakeFiles/zynaddsubfx.dir/moc_ZynAddSubFx.cpp.obj
+[ 97%] Linking CXX shared module ../xpressive.dll
+[ 97%] Built target xpressive
+[ 97%] Linking CXX shared module ../carlapatchbay.dll
+[ 97%] Building CXX object plugins/CarlaRack/CMakeFiles/carlarack.dir/qrc_carlarack.cpp.obj
+[ 97%] Built target carlapatchbay
+[ 97%] Automatic UIC for target gigplayer
+[ 97%] Built target gigplayer_autogen
+[ 97%] Automatic UIC for target sf2player
+[ 97%] Built target sf2player_autogen
+[ 97%] Generating vestige.qrc
+[ 97%] Generating vsteffect.qrc
+[ 97%] Generating moc_VstEffectControlDialog.cpp
+[ 97%] Generating moc_Vestige.cpp
+[ 97%] Generating qrc_vestige.cpp
+[ 97%] Building CXX object plugins/ZynAddSubFx/CMakeFiles/zynaddsubfx.dir/qrc_zynaddsubfx.cpp.obj
+[ 97%] Generating moc_VstEffectControls.cpp
+[ 98%] Generating qrc_vsteffect.cpp
+[ 98%] Linking CXX shared module ../zynaddsubfx.dll
+[ 98%] Built target zynaddsubfx
+[ 98%] Building CXX object plugins/Vestige/CMakeFiles/vestige.dir/moc_Vestige.cpp.obj
+[ 98%] Building CXX object plugins/Vestige/CMakeFiles/vestige.dir/qrc_vestige.cpp.obj
+[ 98%] Building CXX object plugins/VstEffect/CMakeFiles/vsteffect.dir/VstEffectControls.cpp.obj
+[ 98%] Building CXX object plugins/VstEffect/CMakeFiles/vsteffect.dir/VstEffectControlDialog.cpp.obj
+[ 98%] Generating gigplayer.qrc
+[ 98%] Generating moc_GigPlayer.cpp
+[ 98%] Generating moc_PatchesDialog.cpp
+[ 98%] Generating qrc_gigplayer.cpp
+[ 97%] Building CXX object plugins/CarlaRack/CMakeFiles/carlarack.dir/CarlaRack.cpp.obj
+[ 98%] Linking CXX shared module ../carlarack.dll
+[ 98%] Built target carlarack
+[ 98%] Generating moc_PatchesDialog.cpp
+[ 98%] Generating moc_Sf2Player.cpp
+[ 98%] Generating sf2player.qrc
+[ 98%] Generating qrc_sf2player.cpp
+[ 98%] Building CXX object plugins/VstEffect/CMakeFiles/vsteffect.dir/VstEffect.cpp.obj
+[ 98%] Building CXX object plugins/VstEffect/CMakeFiles/vsteffect.dir/VstSubPluginFeatures.cpp.obj
+[ 99%] Building CXX object plugins/VstEffect/CMakeFiles/vsteffect.dir/moc_VstEffectControlDialog.cpp.obj
+[ 99%] Building CXX object plugins/VstEffect/CMakeFiles/vsteffect.dir/moc_VstEffectControls.cpp.obj
+[ 99%] Building CXX object plugins/VstEffect/CMakeFiles/vsteffect.dir/qrc_vsteffect.cpp.obj
+[ 99%] Linking CXX shared module ../vsteffect.dll
+[ 99%] Built target vsteffect
+[ 99%] Building CXX object plugins/GigPlayer/CMakeFiles/gigplayer.dir/PatchesDialog.cpp.obj
+[ 99%] Building CXX object plugins/GigPlayer/CMakeFiles/gigplayer.dir/moc_GigPlayer.cpp.obj
+[ 99%] Building CXX object plugins/GigPlayer/CMakeFiles/gigplayer.dir/moc_PatchesDialog.cpp.obj
+[ 99%] Building CXX object plugins/GigPlayer/CMakeFiles/gigplayer.dir/qrc_gigplayer.cpp.obj
+[ 99%] Building CXX object plugins/Sf2Player/CMakeFiles/sf2player.dir/PatchesDialog.cpp.obj
+[ 99%] Building CXX object plugins/Sf2Player/CMakeFiles/sf2player.dir/moc_Sf2Player.cpp.obj
+[ 99%] Building CXX object plugins/Sf2Player/CMakeFiles/sf2player.dir/moc_PatchesDialog.cpp.obj
+[100%] Building CXX object plugins/Sf2Player/CMakeFiles/sf2player.dir/qrc_sf2player.cpp.obj
+[ 98%] Building CXX object plugins/Vestige/CMakeFiles/vestige.dir/Vestige.cpp.obj
+[100%] Linking CXX shared module ../vestige.dll
+[100%] Built target vestige
+[ 98%] Building CXX object plugins/Sf2Player/CMakeFiles/sf2player.dir/Sf2Player.cpp.obj
+[100%] Linking CXX shared module ../sf2player.dll
+[100%] Built target sf2player
+[ 98%] Building CXX object plugins/GigPlayer/CMakeFiles/gigplayer.dir/GigPlayer.cpp.obj
+[100%] Linking CXX shared module ../gigplayer.dll
+[100%] Built target gigplayer

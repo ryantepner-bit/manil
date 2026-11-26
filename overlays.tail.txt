@@ -1,0 +1,6 @@
+fix-msvc-pdb-install.patch
+no-static-suffix.patch
+pcre2-10.35_fix-uwp.patch
+portfile.cmake
+usage
+vcpkg.json

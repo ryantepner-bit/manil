@@ -1,0 +1,110 @@
+ * branch            1c46ef34a28d4637b43fb6d5ebb31d38c05f4bd8 -> FETCH_HEAD
+Submodule path 'src/3rdparty/ringbuffer': checked out '1c46ef34a28d4637b43fb6d5ebb31d38c05f4bd8'
+From https://github.com/x42/weakjack
+ * branch            fd11655be3b2efd6082968ecfe53f9cfe88bda2b -> FETCH_HEAD
+Submodule path 'src/3rdparty/weakjack/weakjack': checked out 'fd11655be3b2efd6082968ecfe53f9cfe88bda2b'
+'manil/lmms/./MANDELBROT_OVERLAY.md' -> 'src/./MANDELBROT_OVERLAY.md'
+'manil/lmms/./include/FractalEngine.h' -> 'src/./include/FractalEngine.h'
+'manil/lmms/./include/FractalGenerator.h' -> 'src/./include/FractalGenerator.h'
+'manil/lmms/./include/FractalGeneratorView.h' -> 'src/./include/FractalGeneratorView.h'
+'manil/lmms/./include/FractalWindow.h' -> 'src/./include/FractalWindow.h'
+'manil/lmms/./include/MandelModulator.h' -> 'src/./include/MandelModulator.h'
+'manil/lmms/./include/WelcomeScreen.h' -> 'src/./include/WelcomeScreen.h'
+'manil/lmms/./include/fractal' -> 'src/./include/fractal'
+'manil/lmms/./include/fractal/Conductor.h' -> 'src/./include/fractal/Conductor.h'
+'manil/lmms/./include/fractal/FractalMath.h' -> 'src/./include/fractal/FractalMath.h'
+'manil/lmms/./include/fractal/PhraseHistory.h' -> 'src/./include/fractal/PhraseHistory.h'
+'manil/lmms/./include/fractal/PyoGen.h' -> 'src/./include/fractal/PyoGen.h'
+'manil/lmms/./plugins/MandelCloud' -> 'src/./plugins/MandelCloud'
+'manil/lmms/./plugins/MandelCloud/CMakeLists.txt' -> 'src/./plugins/MandelCloud/CMakeLists.txt'
+'manil/lmms/./plugins/MandelCloud/MandelCloud.cpp' -> 'src/./plugins/MandelCloud/MandelCloud.cpp'
+'manil/lmms/./plugins/MandelCloud/MandelCloud.h' -> 'src/./plugins/MandelCloud/MandelCloud.h'
+'manil/lmms/./plugins/MandelCommon' -> 'src/./plugins/MandelCommon'
+'manil/lmms/./plugins/MandelCommon/CeciliaDsp.cpp' -> 'src/./plugins/MandelCommon/CeciliaDsp.cpp'
+'manil/lmms/./plugins/MandelCommon/CeciliaDsp.h' -> 'src/./plugins/MandelCommon/CeciliaDsp.h'
+'manil/lmms/./plugins/MandelCommon/MandelShared.h' -> 'src/./plugins/MandelCommon/MandelShared.h'
+'manil/lmms/./plugins/MandelCommon/tests' -> 'src/./plugins/MandelCommon/tests'
+'manil/lmms/./plugins/MandelCommon/tests/dsp_test.cpp' -> 'src/./plugins/MandelCommon/tests/dsp_test.cpp'
+'manil/lmms/./plugins/MandelCommon/tests/dsp_test2.cpp' -> 'src/./plugins/MandelCommon/tests/dsp_test2.cpp'
+'manil/lmms/./plugins/MandelFreqShift' -> 'src/./plugins/MandelFreqShift'
+'manil/lmms/./plugins/MandelFreqShift/CMakeLists.txt' -> 'src/./plugins/MandelFreqShift/CMakeLists.txt'
+'manil/lmms/./plugins/MandelFreqShift/MandelFreqShift.cpp' -> 'src/./plugins/MandelFreqShift/MandelFreqShift.cpp'
+'manil/lmms/./plugins/MandelFreqShift/MandelFreqShift.h' -> 'src/./plugins/MandelFreqShift/MandelFreqShift.h'
+'manil/lmms/./plugins/MandelHarmonizer' -> 'src/./plugins/MandelHarmonizer'
+'manil/lmms/./plugins/MandelHarmonizer/CMakeLists.txt' -> 'src/./plugins/MandelHarmonizer/CMakeLists.txt'
+'manil/lmms/./plugins/MandelHarmonizer/MandelHarmonizer.cpp' -> 'src/./plugins/MandelHarmonizer/MandelHarmonizer.cpp'
+'manil/lmms/./plugins/MandelHarmonizer/MandelHarmonizer.h' -> 'src/./plugins/MandelHarmonizer/MandelHarmonizer.h'
+'manil/lmms/./plugins/MandelPhaser' -> 'src/./plugins/MandelPhaser'
+'manil/lmms/./plugins/MandelPhaser/CMakeLists.txt' -> 'src/./plugins/MandelPhaser/CMakeLists.txt'
+'manil/lmms/./plugins/MandelPhaser/MandelPhaser.cpp' -> 'src/./plugins/MandelPhaser/MandelPhaser.cpp'
+'manil/lmms/./plugins/MandelPhaser/MandelPhaser.h' -> 'src/./plugins/MandelPhaser/MandelPhaser.h'
+'manil/lmms/./plugins/MandelResonator' -> 'src/./plugins/MandelResonator'
+'manil/lmms/./plugins/MandelResonator/CMakeLists.txt' -> 'src/./plugins/MandelResonator/CMakeLists.txt'
+'manil/lmms/./plugins/MandelResonator/MandelResonator.cpp' -> 'src/./plugins/MandelResonator/MandelResonator.cpp'
+'manil/lmms/./plugins/MandelResonator/MandelResonator.h' -> 'src/./plugins/MandelResonator/MandelResonator.h'
+'manil/lmms/./plugins/MandelSpectral' -> 'src/./plugins/MandelSpectral'
+'manil/lmms/./plugins/MandelSpectral/CMakeLists.txt' -> 'src/./plugins/MandelSpectral/CMakeLists.txt'
+'manil/lmms/./plugins/MandelSpectral/MandelSpectral.cpp' -> 'src/./plugins/MandelSpectral/MandelSpectral.cpp'
+'manil/lmms/./plugins/MandelSpectral/MandelSpectral.h' -> 'src/./plugins/MandelSpectral/MandelSpectral.h'
+'manil/lmms/./src/core/FractalEngine.cpp' -> 'src/./src/core/FractalEngine.cpp'
+'manil/lmms/./src/core/FractalGenerator.cpp' -> 'src/./src/core/FractalGenerator.cpp'
+'manil/lmms/./src/core/MandelModulator.cpp' -> 'src/./src/core/MandelModulator.cpp'
+'manil/lmms/./src/core/fractal' -> 'src/./src/core/fractal'
+'manil/lmms/./src/core/fractal/Conductor.cpp' -> 'src/./src/core/fractal/Conductor.cpp'
+'manil/lmms/./src/core/fractal/FractalMath.cpp' -> 'src/./src/core/fractal/FractalMath.cpp'
+'manil/lmms/./src/core/fractal/PhraseHistory.cpp' -> 'src/./src/core/fractal/PhraseHistory.cpp'
+'manil/lmms/./src/core/fractal/tests' -> 'src/./src/core/fractal/tests'
+'manil/lmms/./src/core/fractal/tests/engine_test.cpp' -> 'src/./src/core/fractal/tests/engine_test.cpp'
+'manil/lmms/./src/gui/FractalWindow.cpp' -> 'src/./src/gui/FractalWindow.cpp'
+'manil/lmms/./src/gui/WelcomeScreen.cpp' -> 'src/./src/gui/WelcomeScreen.cpp'
+'manil/lmms/./src/gui/instrument/FractalGeneratorView.cpp' -> 'src/./src/gui/instrument/FractalGeneratorView.cpp'
+drums-cc0: 257 files
+applying manil/ci/patches/01-fractal-engine.patch
+Checking patch include/Instrument.h...
+Checking patch include/InstrumentTrack.h...
+Checking patch include/InstrumentTrackWindow.h...
+Checking patch include/MainWindow.h...
+Checking patch plugins/SlicerT/SlicerT.h...
+Checking patch src/core/CMakeLists.txt...
+Checking patch src/core/Song.cpp...
+Checking patch src/gui/CMakeLists.txt...
+Checking patch src/gui/MainWindow.cpp...
+Checking patch src/gui/instrument/InstrumentTrackWindow.cpp...
+Checking patch src/tracks/InstrumentTrack.cpp...
+Applied patch include/Instrument.h cleanly.
+Applied patch include/InstrumentTrack.h cleanly.
+Applied patch include/InstrumentTrackWindow.h cleanly.
+Applied patch include/MainWindow.h cleanly.
+Applied patch plugins/SlicerT/SlicerT.h cleanly.
+Applied patch src/core/CMakeLists.txt cleanly.
+Applied patch src/core/Song.cpp cleanly.
+Applied patch src/gui/CMakeLists.txt cleanly.
+Applied patch src/gui/MainWindow.cpp cleanly.
+Applied patch src/gui/instrument/InstrumentTrackWindow.cpp cleanly.
+Applied patch src/tracks/InstrumentTrack.cpp cleanly.
+applying manil/ci/patches/02-mandel-plugins.patch
+Checking patch cmake/modules/PluginList.cmake...
+Applied patch cmake/modules/PluginList.cmake cleanly.
+applying manil/ci/patches/03-mandelbrot-branding.patch
+Checking patch CMakeLists.txt...
+Checking patch src/core/main.cpp...
+Checking patch src/gui/CMakeLists.txt...
+Checking patch src/gui/MainWindow.cpp...
+Applied patch CMakeLists.txt cleanly.
+Applied patch src/core/main.cpp cleanly.
+Applied patch src/gui/CMakeLists.txt cleanly.
+Applied patch src/gui/MainWindow.cpp cleanly.
+applying manil/ci/patches/04-mandel-modulator.patch
+Checking patch include/Controller.h...
+Checking patch src/core/CMakeLists.txt...
+Checking patch src/core/Controller.cpp...
+Checking patch src/gui/ControllerRackView.cpp...
+Applied patch include/Controller.h cleanly.
+Applied patch src/core/CMakeLists.txt cleanly.
+Applied patch src/core/Controller.cpp cleanly.
+Applied patch src/gui/ControllerRackView.cpp cleanly.
+icons written to src/data/themes/default
+templates written to src/data/projects/templates and manil/ci/renders
+css replacements: 93
+theme images recoloured: 30
+branding drawn
