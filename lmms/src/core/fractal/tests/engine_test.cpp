@@ -45,7 +45,7 @@ static void writeMidi(const char* path, const std::vector<Track>& tracks, int bp
 static void runStyle(Style style, int phrases, const char* midiPath)
 {
 	Conductor c;
-	GlobalSettings gs; gs.style = style; gs.novelty = 0.8f; gs.noveltyMode = NoveltyMode::Recent;
+	GlobalSettings gs; gs.sustain = style == Style::Ambient ? 0.8f : 0.0f; gs.syncopation = style == Style::Breakbeat ? 0.6f : 0.0f; gs.palette = style == Style::Ambient ? 1 : 0; gs.novelty = 0.8f; gs.noveltyMode = NoveltyMode::Recent;
 	c.setSettings(gs);
 	std::vector<Track> tracks;
 	auto addT = [&](const char* name, Role r, int base = 69) { Track t; t.name = name; t.ps.role = r; t.ps.baseKey = base; t.ps.channelSeed = static_cast<int>(tracks.size()); tracks.push_back(std::move(t)); };
