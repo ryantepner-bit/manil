@@ -363,4 +363,142 @@ void PhaseVocoder::frame(const Params& p)
 	std::fill(m_outAccum.end() - static_cast<long>(h), m_outAccum.end(), 0.0f);
 }
 
+// ================================================================== Harmonizer (pyo harmonizermodule.c)
+
+void Harmonizer::prepare(float sampleRate)
+{
+	m_sr = sampleRate;
+	m_size = static_cast<int>(sampleRate);
+	m_buffer.assign(static_cast<std::size_t>(m_size) + 1, 0.0f);
+	m_inCount = 0;
+	m_pointer = 0.0;
+	m_x1 = m_y1 = 0.0f;
+}
+
+float Harmonizer::process(float in, float semitones, float feedback, float winsize)
+{
+	if (m_size == 0) { return 0.0f; }
+	const float feed = std::clamp(feedback, 0.0f, 1.0f);
+	const double win = std::clamp(static_cast<double>(winsize), 0.01, 0.9);
+	const double ratio = std::pow(2.0, semitones / 12.0);
+	const double rate = (ratio - 1.0) / win;
+	const double inc = -rate / m_sr;
+	float out = 0.0f;
+	for (int o = 0; o < 2; ++o)
+	{
+		double pos = m_pointer + (o == 0 ? 0.0 : 0.5);
+		if (pos >= 1.0) { pos -= 1.0; }
+		// pyo's ENVELOPE table is half a sine over the window
+		const float amp = static_cast<float>(std::sin(Pi * pos));
+		double xind = m_inCount - (pos * win * m_sr);
+		if (xind < 0) { xind += m_size; }
+		const auto ip = static_cast<int>(xind);
+		const float fp = static_cast<float>(xind - ip);
+		const float a = m_buffer[static_cast<std::size_t>(ip)];
+		const float b = m_buffer[static_cast<std::size_t>(std::min(ip + 1, m_size))];
+		out += (a + (b - a) * fp) * amp;
+	}
+	m_pointer += inc;
+	if (m_pointer < 0.0) { m_pointer += 1.0; }
+	else if (m_pointer >= 1.0) { m_pointer -= 1.0; }
+	m_y1 = out - m_x1 + 0.995f * m_y1;
+	m_x1 = out;
+	m_buffer[static_cast<std::size_t>(m_inCount)] = in + m_y1 * feed;
+	if (m_inCount == 0) { m_buffer[static_cast<std::size_t>(m_size)] = m_buffer[0]; }
+	if (++m_inCount >= m_size) { m_inCount = 0; }
+	return out;
+}
+
+// ================================================================== Hilbert / FreqShift (pyo hilbertmodule.c)
+
+void Hilbert::prepare(float sampleRate)
+{
+	// pyo: 6th order allpass poles (x 15 Hz)
+	static const double poles[12] = {.3609, 2.7412, 11.1573, 44.7581, 179.6242, 798.4578,
+		1.2524, 5.5671, 22.3423, 89.6271, 364.7914, 2770.1114};
+	for (int i = 0; i < 12; ++i)
+	{
+		const double polefreq = poles[i] * 15.0;
+		const double rc = 1.0 / (TwoPi * polefreq);
+		const double alpha = 1.0 / rc;
+		m_coefs[i] = static_cast<float>(-(1.0 - (alpha / (2.0 * sampleRate))) / (1.0 + (alpha / (2.0 * sampleRate))));
+		m_x1[i] = m_y1[i] = 0.0f;
+	}
+}
+
+void Hilbert::process(float in, float& re, float& im)
+{
+	float xn1 = in, yn1 = 0.0f;
+	for (int j = 0; j < 6; ++j)
+	{
+		yn1 = m_coefs[j] * (xn1 - m_y1[j]) + m_x1[j];
+		m_x1[j] = xn1;
+		m_y1[j] = yn1;
+		xn1 = yn1;
+	}
+	float xn2 = in, yn2 = 0.0f;
+	for (int j = 6; j < 12; ++j)
+	{
+		yn2 = m_coefs[j] * (xn2 - m_y1[j]) + m_x1[j];
+		m_x1[j] = xn2;
+		m_y1[j] = yn2;
+		xn2 = yn2;
+	}
+	re = yn1;
+	im = yn2;
+}
+
+float FreqShifter::process(float in, float shiftHz)
+{
+	float re, im;
+	m_hilbert.process(in, re, im);
+	m_phase += TwoPi * shiftHz / m_sr;
+	if (m_phase > TwoPi) { m_phase -= TwoPi; }
+	else if (m_phase < 0.0) { m_phase += TwoPi; }
+	// pyo FreqShift: real * cos + imag * sin (with this Hilbert pair) moves the spectrum up by shiftHz (down when negative)
+	return static_cast<float>(re * std::cos(m_phase) + im * std::sin(m_phase));
+}
+
+// ================================================================== Phaser (pyo filtremodule.c)
+
+void Phaser::prepare(float sampleRate)
+{
+	m_sr = sampleRate;
+	for (int i = 0; i < MaxStages; ++i) { m_y1[i] = m_y2[i] = 0.0f; }
+	m_tmp = 0.0f;
+	set(1000.0f, 1.1f, 10.0f, 8);
+}
+
+void Phaser::set(float freq, float spread, float q, int stages)
+{
+	m_stages = std::clamp(stages, 1, MaxStages);
+	const double qfactor = 1.0 / std::max(0.1f, q) * (-Pi / m_sr);
+	double fr = freq;
+	for (int i = 0; i < m_stages; ++i)
+	{
+		fr = std::clamp(fr, 20.0, m_sr * 0.5);
+		const double radius = std::exp(fr * qfactor);
+		const double angle = fr * TwoPi / m_sr;
+		m_alpha[i] = static_cast<float>(radius * radius);
+		// pyo reads cos(angle) from a table; computed directly here
+		m_beta[i] = static_cast<float>(-2.0 * radius * std::cos(angle));
+		fr *= spread;
+	}
+}
+
+float Phaser::process(float in, float feedback)
+{
+	const float feed = std::clamp(feedback, -1.0f, 1.0f);
+	m_tmp = in + m_tmp * feed;
+	for (int j = 0; j < m_stages; ++j)
+	{
+		const float val = m_tmp + (m_y1[j] * -m_beta[j]) + (m_y2[j] * -m_alpha[j]);
+		m_tmp = (val * m_alpha[j]) + (m_y1[j] * m_beta[j]) + m_y2[j];
+		m_y2[j] = m_y1[j];
+		m_y1[j] = val;
+	}
+	if (!std::isfinite(m_tmp)) { m_tmp = 0.0f; for (int j = 0; j < MaxStages; ++j) { m_y1[j] = m_y2[j] = 0.0f; } }
+	return m_tmp;
+}
+
 } // namespace lmms::mandeldsp

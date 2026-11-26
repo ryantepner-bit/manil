@@ -9,6 +9,12 @@
  *                      Time/Granulator and Synthesis/StochGrains modules
  *   PhaseVocoder    <- pyo PVAnal / PVSynth (phasevocmodule.c) with PVVerb's spectral decay,
  *                      a spectral freeze and PVShift-style bin shifting (cecilia5 Spectral modules)
+ *   Harmonizer      <- pyo Harmonizer (harmonizermodule.c): two overlapping sine-windowed taps
+ *                      on a 1 s delay line, feedback through a DC blocker
+ *   Hilbert         <- pyo Hilbert (hilbertmodule.c): two 6th-order allpass chains (90 degrees
+ *                      apart); FreqShift = pyo's FreqShift (Hilbert + quadrature oscillator)
+ *   Phaser          <- pyo Phaser (filtremodule.c): cascaded 2-pole allpass stages with spread,
+ *                      Q and feedback
  *
  * pyo: Copyright 2009-2015 Olivier Belanger, LGPL-3.0-or-later.
  * cecilia5: Copyright Olivier Belanger, Jean-Michel Dumas, GPL-3.0-or-later.
@@ -113,6 +119,63 @@ private:
 	std::vector<std::complex<float>> m_buf;
 	int m_inCount = 0, m_outCount = 0;
 	bool m_frozen = false;
+};
+
+//! pyo Harmonizer: pitch shifting without changing length
+class Harmonizer
+{
+public:
+	void prepare(float sampleRate);
+	//! semitones, feedback 0..1, window in seconds (pyo default 0.1)
+	float process(float in, float semitones, float feedback, float winsize);
+
+private:
+	std::vector<float> m_buffer;
+	int m_size = 0, m_inCount = 0;
+	float m_sr = 44100.0f;
+	double m_pointer = 0.0;
+	float m_x1 = 0.0f, m_y1 = 0.0f;
+};
+
+//! pyo Hilbert: analytic signal (real, imaginary)
+class Hilbert
+{
+public:
+	void prepare(float sampleRate);
+	void process(float in, float& re, float& im);
+
+private:
+	float m_coefs[12] {}, m_x1[12] {}, m_y1[12] {};
+};
+
+//! pyo FreqShift: moves every partial by a fixed number of Hz (not harmonic: bells, metal)
+class FreqShifter
+{
+public:
+	void prepare(float sampleRate) { m_sr = sampleRate; m_hilbert.prepare(sampleRate); }
+	float process(float in, float shiftHz);
+
+private:
+	Hilbert m_hilbert;
+	float m_sr = 44100.0f;
+	double m_phase = 0.0;
+};
+
+//! pyo Phaser: up to 24 allpass stages
+class Phaser
+{
+public:
+	static constexpr int MaxStages = 24;
+	void prepare(float sampleRate);
+	//! call before process when freq / spread / q / stages change (cheap enough per block)
+	void set(float freq, float spread, float q, int stages);
+	float process(float in, float feedback);
+
+private:
+	float m_sr = 44100.0f;
+	int m_stages = 8;
+	float m_alpha[MaxStages] {}, m_beta[MaxStages] {}, m_y1[MaxStages] {}, m_y2[MaxStages] {};
+	float m_tmp = 0.0f;
 };
 
 } // namespace lmms::mandeldsp

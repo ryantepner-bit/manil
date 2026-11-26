@@ -19,6 +19,7 @@
 #include "EffectControls.h"
 #include "FractalEngine.h"
 #include "Knob.h"
+#include "LcdSpinBox.h"
 #include "LedCheckBox.h"
 
 namespace lmms::mandeldsp
@@ -110,6 +111,14 @@ public:
 		k->setModel(model);
 		k->setHintText(hint, unit);
 		m_grid->addWidget(k, row + 1, col, Qt::AlignHCenter);
+	}
+
+	void lcd(const QString& label, IntModel* model, int digits, int row, int col)
+	{
+		auto l = new LcdSpinBox(digits, this, label);
+		l->setLabel(label);
+		l->setModel(model);
+		m_grid->addWidget(l, row + 1, col, Qt::AlignHCenter);
 	}
 
 	void led(const QString& label, BoolModel* model, int row, int col, int span = 2)
