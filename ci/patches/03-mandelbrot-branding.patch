@@ -109,7 +109,7 @@ index 806954a..baa4769 100644
  	m_toolBarLayout->setColumnStretch( 100, 1 );
  
  	// setup-dialog opened before?
-@@ -597,7 +629,7 @@ void MainWindow::resetWindowTitle()
+@@ -597,5 +629,5 @@ void MainWindow::resetWindowTitle()
  		title += " - " + tr( "Recover session. Please save your work!" );
  	}
  
