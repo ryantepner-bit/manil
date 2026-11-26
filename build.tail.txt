@@ -1,0 +1,300 @@
+[ 53%] Building CXX object tests/CMakeFiles/AutomatableModelTest.dir/AutomatableModelTest_autogen/mocs_compilation.cpp.o
+[ 54%] Building CXX object tests/CMakeFiles/AutomatableModelTest.dir/src/core/AutomatableModelTest.cpp.o
+[ 54%] Linking CXX executable AutomatableModelTest
+[ 54%] Built target ArrayVectorTest
+[ 54%] Building CXX object tests/CMakeFiles/MathTest.dir/MathTest_autogen/mocs_compilation.cpp.o
+[ 54%] Building CXX object tests/CMakeFiles/MathTest.dir/src/core/MathTest.cpp.o
+[ 54%] Linking CXX executable MathTest
+[ 54%] Built target AutomatableModelTest
+[ 54%] Built target AudioBufferTest
+[ 54%] Building CXX object tests/CMakeFiles/ProjectVersionTest.dir/ProjectVersionTest_autogen/mocs_compilation.cpp.o
+[ 54%] Building CXX object tests/CMakeFiles/RelativePathsTest.dir/RelativePathsTest_autogen/mocs_compilation.cpp.o
+[ 54%] Building CXX object tests/CMakeFiles/ProjectVersionTest.dir/src/core/ProjectVersionTest.cpp.o
+[ 54%] Building CXX object tests/CMakeFiles/RelativePathsTest.dir/src/core/RelativePathsTest.cpp.o
+[ 54%] Linking CXX executable ProjectVersionTest
+[ 54%] Linking CXX executable RelativePathsTest
+[ 54%] Built target MathTest
+[ 55%] Building CXX object tests/CMakeFiles/TimelineTest.dir/TimelineTest_autogen/mocs_compilation.cpp.o
+[ 55%] Building CXX object tests/CMakeFiles/TimelineTest.dir/src/core/TimelineTest.cpp.o
+[ 55%] Built target ProjectVersionTest
+[ 55%] Building CXX object tests/CMakeFiles/AutomationTrackTest.dir/AutomationTrackTest_autogen/mocs_compilation.cpp.o
+[ 55%] Building CXX object tests/CMakeFiles/AutomationTrackTest.dir/src/tracks/AutomationTrackTest.cpp.o
+[ 56%] Built target RelativePathsTest
+[ 56%] Linking CXX executable ../lmms
+[ 57%] Built target lmms
+[ 57%] Generating audiofileprocessor.qrc
+[ 57%] Generating kicker.qrc
+[ 57%] Generating moc_Kicker.cpp
+[ 57%] Generating moc_AudioFileProcessor.cpp
+[ 57%] Generating qrc_kicker.cpp
+[ 58%] Generating moc_AudioFileProcessorView.cpp
+[ 59%] Building CXX object plugins/Kicker/CMakeFiles/kicker.dir/Kicker.cpp.o
+[ 59%] Generating moc_AudioFileProcessorWaveView.cpp
+[ 59%] Generating qrc_audiofileprocessor.cpp
+[ 59%] Building CXX object plugins/AudioFileProcessor/CMakeFiles/audiofileprocessor.dir/AudioFileProcessor.cpp.o
+[ 59%] Linking CXX executable TimelineTest
+[ 59%] Built target TimelineTest
+[ 59%] Generating tripleoscillator.qrc
+[ 59%] Generating moc_TripleOscillator.cpp
+[ 60%] Generating qrc_tripleoscillator.cpp
+[ 60%] Building CXX object plugins/TripleOscillator/CMakeFiles/tripleoscillator.dir/TripleOscillator.cpp.o
+[ 61%] Linking CXX executable AutomationTrackTest
+[ 61%] Built target AutomationTrackTest
+[ 61%] Building CXX object plugins/AudioFileProcessor/CMakeFiles/audiofileprocessor.dir/AudioFileProcessorView.cpp.o
+[ 61%] Building CXX object plugins/AudioFileProcessor/CMakeFiles/audiofileprocessor.dir/AudioFileProcessorWaveView.cpp.o
+[ 61%] Building CXX object plugins/Kicker/CMakeFiles/kicker.dir/moc_Kicker.cpp.o
+[ 61%] Building CXX object plugins/TripleOscillator/CMakeFiles/tripleoscillator.dir/moc_TripleOscillator.cpp.o
+[ 61%] Building CXX object plugins/Kicker/CMakeFiles/kicker.dir/qrc_kicker.cpp.o
+[ 61%] Generating slicert.qrc
+[ 62%] Generating moc_SlicerT.cpp
+[ 62%] Generating moc_SlicerTView.cpp
+[ 62%] Generating moc_SlicerTWaveform.cpp
+[ 62%] Generating qrc_slicert.cpp
+[ 62%] Building CXX object plugins/SlicerT/CMakeFiles/slicert.dir/SlicerT.cpp.o
+[ 62%] Linking CXX shared module ../libkicker.so
+[ 62%] Built target kicker
+[ 62%] Generating reverbsc.qrc
+[ 62%] Generating moc_ReverbSCControlDialog.cpp
+[ 63%] Generating moc_ReverbSCControls.cpp
+[ 63%] Generating qrc_reverbsc.cpp
+[ 63%] Building CXX object plugins/ReverbSC/CMakeFiles/reverbsc.dir/ReverbSC.cpp.o
+[ 63%] Building CXX object plugins/ReverbSC/CMakeFiles/reverbsc.dir/ReverbSCControls.cpp.o
+[ 63%] Building CXX object plugins/ReverbSC/CMakeFiles/reverbsc.dir/ReverbSCControlDialog.cpp.o
+[ 64%] Building C object plugins/ReverbSC/CMakeFiles/reverbsc.dir/base.c.o
+[ 64%] Building C object plugins/ReverbSC/CMakeFiles/reverbsc.dir/revsc.c.o
+[ 64%] Building C object plugins/ReverbSC/CMakeFiles/reverbsc.dir/dcblock.c.o
+[ 64%] Building CXX object plugins/ReverbSC/CMakeFiles/reverbsc.dir/moc_ReverbSCControls.cpp.o
+[ 64%] Building CXX object plugins/ReverbSC/CMakeFiles/reverbsc.dir/moc_ReverbSCControlDialog.cpp.o
+[ 64%] Building CXX object plugins/ReverbSC/CMakeFiles/reverbsc.dir/qrc_reverbsc.cpp.o
+[ 65%] Linking CXX shared module ../libreverbsc.so
+[ 65%] Built target reverbsc
+[ 65%] Generating delay.qrc
+[ 65%] Generating __/Eq/moc_EqFader.cpp
+[ 65%] Generating moc_DelayControls.cpp
+[ 65%] Generating moc_DelayControlsDialog.cpp
+[ 66%] Generating qrc_delay.cpp
+[ 66%] Building CXX object plugins/Delay/CMakeFiles/delay.dir/DelayEffect.cpp.o
+[ 67%] Building CXX object plugins/Delay/CMakeFiles/delay.dir/DelayControls.cpp.o
+[ 67%] Building CXX object plugins/Delay/CMakeFiles/delay.dir/DelayControlsDialog.cpp.o
+[ 67%] Building CXX object plugins/Delay/CMakeFiles/delay.dir/Lfo.cpp.o
+[ 67%] Building CXX object plugins/Delay/CMakeFiles/delay.dir/StereoDelay.cpp.o
+[ 67%] Building CXX object plugins/Delay/CMakeFiles/delay.dir/moc_DelayControls.cpp.o
+[ 67%] Building CXX object plugins/Delay/CMakeFiles/delay.dir/moc_DelayControlsDialog.cpp.o
+[ 68%] Building CXX object plugins/Delay/CMakeFiles/delay.dir/__/Eq/moc_EqFader.cpp.o
+[ 68%] Building CXX object plugins/Delay/CMakeFiles/delay.dir/qrc_delay.cpp.o
+[ 68%] Linking CXX shared module ../libdelay.so
+[ 68%] Built target delay
+[ 68%] Building CXX object plugins/TripleOscillator/CMakeFiles/tripleoscillator.dir/qrc_tripleoscillator.cpp.o
+[ 69%] Building CXX object plugins/AudioFileProcessor/CMakeFiles/audiofileprocessor.dir/moc_AudioFileProcessor.cpp.o
+[ 69%] Building CXX object plugins/AudioFileProcessor/CMakeFiles/audiofileprocessor.dir/moc_AudioFileProcessorView.cpp.o
+[ 69%] Building CXX object plugins/AudioFileProcessor/CMakeFiles/audiofileprocessor.dir/moc_AudioFileProcessorWaveView.cpp.o
+[ 69%] Building CXX object plugins/SlicerT/CMakeFiles/slicert.dir/SlicerTView.cpp.o
+[ 70%] Generating monstro.qrc
+[ 70%] Generating moc_Monstro.cpp
+[ 70%] Generating qrc_monstro.cpp
+[ 70%] Building CXX object plugins/Monstro/CMakeFiles/monstro.dir/Monstro.cpp.o
+[ 71%] Linking CXX shared module ../libtripleoscillator.so
+[ 71%] Building CXX object plugins/AudioFileProcessor/CMakeFiles/audiofileprocessor.dir/qrc_audiofileprocessor.cpp.o
+[ 71%] Built target tripleoscillator
+[ 71%] Building CXX object plugins/Monstro/CMakeFiles/monstro.dir/moc_Monstro.cpp.o
+[ 71%] Building CXX object plugins/Monstro/CMakeFiles/monstro.dir/qrc_monstro.cpp.o
+[ 72%] Building CXX object plugins/SlicerT/CMakeFiles/slicert.dir/SlicerTWaveform.cpp.o
+[ 72%] Building CXX object plugins/SlicerT/CMakeFiles/slicert.dir/moc_SlicerT.cpp.o
+[ 72%] Linking CXX shared module ../libaudiofileprocessor.so
+[ 72%] Building CXX object plugins/SlicerT/CMakeFiles/slicert.dir/moc_SlicerTView.cpp.o
+[ 72%] Generating watsyn.qrc
+[ 72%] Generating moc_Watsyn.cpp
+[ 72%] Generating qrc_watsyn.cpp
+[ 72%] Building CXX object plugins/Watsyn/CMakeFiles/watsyn.dir/Watsyn.cpp.o
+[ 72%] Building CXX object plugins/SlicerT/CMakeFiles/slicert.dir/moc_SlicerTWaveform.cpp.o
+[ 72%] Built target audiofileprocessor
+[ 72%] Generating organic.qrc
+[ 72%] Building CXX object plugins/SlicerT/CMakeFiles/slicert.dir/qrc_slicert.cpp.o
+[ 72%] Generating moc_Organic.cpp
+[ 72%] Generating qrc_organic.cpp
+[ 72%] Building CXX object plugins/Organic/CMakeFiles/organic.dir/Organic.cpp.o
+[ 72%] Linking CXX shared module ../libslicert.so
+[ 72%] Built target slicert
+[ 73%] Generating bitinvader.qrc
+[ 73%] Generating moc_BitInvader.cpp
+[ 73%] Generating qrc_bitinvader.cpp
+[ 73%] Building CXX object plugins/BitInvader/CMakeFiles/bitinvader.dir/BitInvader.cpp.o
+[ 74%] Building CXX object plugins/Watsyn/CMakeFiles/watsyn.dir/moc_Watsyn.cpp.o
+[ 75%] Building CXX object plugins/Organic/CMakeFiles/organic.dir/moc_Organic.cpp.o
+[ 75%] Building CXX object plugins/Organic/CMakeFiles/organic.dir/qrc_organic.cpp.o
+[ 75%] Building CXX object plugins/Watsyn/CMakeFiles/watsyn.dir/qrc_watsyn.cpp.o
+[ 75%] Linking CXX shared module ../libmonstro.so
+[ 75%] Linking CXX shared module ../liborganic.so
+[ 75%] Building CXX object plugins/BitInvader/CMakeFiles/bitinvader.dir/moc_BitInvader.cpp.o
+[ 75%] Building CXX object plugins/BitInvader/CMakeFiles/bitinvader.dir/qrc_bitinvader.cpp.o
+[ 75%] Linking CXX shared module ../libwatsyn.so
+[ 75%] Linking CXX shared module ../libbitinvader.so
+[ 75%] Built target monstro
+[ 75%] Generating lb302.qrc
+[ 76%] Generating moc_Lb302.cpp
+[ 76%] Generating qrc_lb302.cpp
+[ 76%] Building CXX object plugins/Lb302/CMakeFiles/lb302.dir/Lb302.cpp.o
+[ 76%] Built target organic
+[ 77%] Generating compressor.qrc
+[ 77%] Generating __/Eq/moc_EqFader.cpp
+[ 77%] Generating moc_Compressor.cpp
+[ 77%] Generating moc_CompressorControlDialog.cpp
+[ 77%] Built target watsyn
+[ 78%] Generating eq.qrc
+[ 79%] Generating moc_EqControls.cpp
+[ 79%] Generating moc_CompressorControls.cpp
+[ 79%] Generating qrc_compressor.cpp
+[ 79%] Generating moc_EqControlsDialog.cpp
+[ 79%] Building CXX object plugins/Compressor/CMakeFiles/compressor.dir/Compressor.cpp.o
+[ 79%] Building CXX object plugins/Compressor/CMakeFiles/compressor.dir/CompressorControls.cpp.o
+[ 79%] Built target bitinvader
+[ 79%] Generating moc_EqCurve.cpp
+[ 79%] Building CXX object plugins/Compressor/CMakeFiles/compressor.dir/CompressorControlDialog.cpp.o
+[ 79%] Building CXX object plugins/Compressor/CMakeFiles/compressor.dir/moc_Compressor.cpp.o
+[ 79%] Building CXX object plugins/Compressor/CMakeFiles/compressor.dir/moc_CompressorControls.cpp.o
+[ 79%] Generating flanger.qrc
+[ 79%] Generating moc_FlangerControls.cpp
+[ 80%] Building CXX object plugins/Compressor/CMakeFiles/compressor.dir/moc_CompressorControlDialog.cpp.o
+[ 80%] Building CXX object plugins/Compressor/CMakeFiles/compressor.dir/__/Eq/moc_EqFader.cpp.o
+[ 80%] Building CXX object plugins/Compressor/CMakeFiles/compressor.dir/qrc_compressor.cpp.o
+[ 80%] Generating moc_EqFader.cpp
+[ 80%] Generating moc_FlangerControlsDialog.cpp
+[ 80%] Generating moc_EqParameterWidget.cpp
+[ 80%] Generating qrc_flanger.cpp
+[ 80%] Building CXX object plugins/Flanger/CMakeFiles/flanger.dir/FlangerEffect.cpp.o
+[ 81%] Building CXX object plugins/Flanger/CMakeFiles/flanger.dir/FlangerControls.cpp.o
+[ 81%] Generating moc_EqSpectrumView.cpp
+[ 81%] Generating qrc_eq.cpp
+[ 81%] Building CXX object plugins/Eq/CMakeFiles/eq.dir/EqEffect.cpp.o
+[ 81%] Building CXX object plugins/Eq/CMakeFiles/eq.dir/EqCurve.cpp.o
+[ 81%] Building CXX object plugins/Eq/CMakeFiles/eq.dir/EqControls.cpp.o
+[ 81%] Building CXX object plugins/Eq/CMakeFiles/eq.dir/EqControlsDialog.cpp.o
+[ 81%] Building CXX object plugins/Eq/CMakeFiles/eq.dir/EqParameterWidget.cpp.o
+[ 82%] Building CXX object plugins/Eq/CMakeFiles/eq.dir/EqSpectrumView.cpp.o
+[ 82%] Building CXX object plugins/Eq/CMakeFiles/eq.dir/moc_EqControls.cpp.o
+[ 82%] Building CXX object plugins/Eq/CMakeFiles/eq.dir/moc_EqControlsDialog.cpp.o
+[ 82%] Building CXX object plugins/Eq/CMakeFiles/eq.dir/moc_EqCurve.cpp.o
+[ 82%] Building CXX object plugins/Eq/CMakeFiles/eq.dir/moc_EqParameterWidget.cpp.o
+[ 82%] Building CXX object plugins/Eq/CMakeFiles/eq.dir/moc_EqFader.cpp.o
+[ 83%] Building CXX object plugins/Eq/CMakeFiles/eq.dir/moc_EqSpectrumView.cpp.o
+[ 83%] Building CXX object plugins/Eq/CMakeFiles/eq.dir/qrc_eq.cpp.o
+[ 83%] Linking CXX shared module ../libcompressor.so
+[ 83%] Linking CXX shared module ../libeq.so
+[ 83%] Built target compressor
+[ 83%] Generating multitapecho.qrc
+[ 83%] Generating moc_MultitapEchoControlDialog.cpp
+[ 83%] Built target eq
+[ 83%] Building CXX object plugins/Flanger/CMakeFiles/flanger.dir/FlangerControlsDialog.cpp.o
+[ 83%] Generating moc_MultitapEchoControls.cpp
+[ 83%] Building CXX object plugins/Flanger/CMakeFiles/flanger.dir/MonoDelay.cpp.o
+[ 83%] Building CXX object plugins/Lb302/CMakeFiles/lb302.dir/moc_Lb302.cpp.o
+[ 83%] Generating moc_StereoEnhancerControls.cpp
+[ 84%] Generating qrc_multitapecho.cpp
+[ 84%] Building CXX object plugins/MultitapEcho/CMakeFiles/multitapecho.dir/MultitapEcho.cpp.o
+[ 84%] Building CXX object plugins/MultitapEcho/CMakeFiles/multitapecho.dir/MultitapEchoControls.cpp.o
+[ 84%] Generating moc_StereoEnhancerControlDialog.cpp
+[ 85%] Building CXX object plugins/MultitapEcho/CMakeFiles/multitapecho.dir/MultitapEchoControlDialog.cpp.o
+[ 85%] Building CXX object plugins/MultitapEcho/CMakeFiles/multitapecho.dir/moc_MultitapEchoControls.cpp.o
+[ 85%] Building CXX object plugins/MultitapEcho/CMakeFiles/multitapecho.dir/moc_MultitapEchoControlDialog.cpp.o
+[ 85%] Building CXX object plugins/MultitapEcho/CMakeFiles/multitapecho.dir/qrc_multitapecho.cpp.o
+[ 85%] Building CXX object plugins/StereoEnhancer/CMakeFiles/stereoenhancer.dir/StereoEnhancer.cpp.o
+[ 85%] Building CXX object plugins/StereoEnhancer/CMakeFiles/stereoenhancer.dir/StereoEnhancerControls.cpp.o
+[ 85%] Building CXX object plugins/StereoEnhancer/CMakeFiles/stereoenhancer.dir/StereoEnhancerControlDialog.cpp.o
+[ 85%] Linking CXX shared module ../libmultitapecho.so
+[ 86%] Building CXX object plugins/StereoEnhancer/CMakeFiles/stereoenhancer.dir/moc_StereoEnhancerControls.cpp.o
+[ 86%] Building CXX object plugins/StereoEnhancer/CMakeFiles/stereoenhancer.dir/moc_StereoEnhancerControlDialog.cpp.o
+[ 86%] Linking CXX shared module ../libstereoenhancer.so
+[ 86%] Built target stereoenhancer
+[ 86%] Building CXX object plugins/Flanger/CMakeFiles/flanger.dir/moc_FlangerControls.cpp.o
+[ 86%] Building CXX object plugins/Lb302/CMakeFiles/lb302.dir/qrc_lb302.cpp.o
+[ 86%] Built target multitapecho
+[ 86%] Generating bitcrush.qrc
+[ 86%] Generating moc_BitcrushControlDialog.cpp
+[ 86%] Building CXX object plugins/Flanger/CMakeFiles/flanger.dir/moc_FlangerControlsDialog.cpp.o
+[ 86%] Generating amplifier.qrc
+[ 87%] Generating moc_AmplifierControlDialog.cpp
+[ 88%] Generating moc_BitcrushControls.cpp
+[ 88%] Generating moc_AmplifierControls.cpp
+[ 88%] Generating qrc_bitcrush.cpp
+[ 88%] Building CXX object plugins/Bitcrush/CMakeFiles/bitcrush.dir/Bitcrush.cpp.o
+[ 88%] Building CXX object plugins/Bitcrush/CMakeFiles/bitcrush.dir/BitcrushControls.cpp.o
+[ 88%] Generating qrc_amplifier.cpp
+[ 88%] Building CXX object plugins/Bitcrush/CMakeFiles/bitcrush.dir/BitcrushControlDialog.cpp.o
+[ 88%] Building CXX object plugins/Amplifier/CMakeFiles/amplifier.dir/Amplifier.cpp.o
+[ 89%] Building CXX object plugins/Bitcrush/CMakeFiles/bitcrush.dir/moc_BitcrushControls.cpp.o
+[ 89%] Building CXX object plugins/Amplifier/CMakeFiles/amplifier.dir/AmplifierControls.cpp.o
+[ 89%] Building CXX object plugins/Amplifier/CMakeFiles/amplifier.dir/AmplifierControlDialog.cpp.o
+[ 89%] Building CXX object plugins/Bitcrush/CMakeFiles/bitcrush.dir/moc_BitcrushControlDialog.cpp.o
+[ 89%] Building CXX object plugins/Bitcrush/CMakeFiles/bitcrush.dir/qrc_bitcrush.cpp.o
+[ 89%] Building CXX object plugins/Amplifier/CMakeFiles/amplifier.dir/moc_AmplifierControls.cpp.o
+[ 90%] Building CXX object plugins/Amplifier/CMakeFiles/amplifier.dir/moc_AmplifierControlDialog.cpp.o
+[ 90%] Building CXX object plugins/Amplifier/CMakeFiles/amplifier.dir/qrc_amplifier.cpp.o
+[ 90%] Linking CXX shared module ../libbitcrush.so
+[ 90%] Linking CXX shared module ../libamplifier.so
+[ 90%] Built target amplifier
+[ 90%] Built target bitcrush
+[ 90%] Building CXX object plugins/Flanger/CMakeFiles/flanger.dir/qrc_flanger.cpp.o
+[ 91%] Generating dualfilter.qrc
+[ 91%] Generating moc_DualFilterControlDialog.cpp
+[ 92%] Generating granularpitchshifter.qrc
+[ 92%] Generating moc_GranularPitchShifterControlDialog.cpp
+[ 92%] Generating moc_DualFilterControls.cpp
+[ 92%] Generating moc_GranularPitchShifterControls.cpp
+[ 92%] Generating qrc_dualfilter.cpp
+[ 92%] Building CXX object plugins/DualFilter/CMakeFiles/dualfilter.dir/DualFilter.cpp.o
+[ 92%] Building CXX object plugins/DualFilter/CMakeFiles/dualfilter.dir/DualFilterControls.cpp.o
+[ 92%] Building CXX object plugins/DualFilter/CMakeFiles/dualfilter.dir/DualFilterControlDialog.cpp.o
+[ 92%] Building CXX object plugins/DualFilter/CMakeFiles/dualfilter.dir/moc_DualFilterControls.cpp.o
+[ 92%] Generating qrc_granularpitchshifter.cpp
+[ 92%] Building CXX object plugins/DualFilter/CMakeFiles/dualfilter.dir/moc_DualFilterControlDialog.cpp.o
+[ 92%] Building CXX object plugins/GranularPitchShifter/CMakeFiles/granularpitchshifter.dir/GranularPitchShifterEffect.cpp.o
+[ 92%] Building CXX object plugins/GranularPitchShifter/CMakeFiles/granularpitchshifter.dir/GranularPitchShifterControls.cpp.o
+[ 93%] Building CXX object plugins/DualFilter/CMakeFiles/dualfilter.dir/qrc_dualfilter.cpp.o
+[ 93%] Building CXX object plugins/GranularPitchShifter/CMakeFiles/granularpitchshifter.dir/GranularPitchShifterControlDialog.cpp.o
+[ 93%] Building CXX object plugins/GranularPitchShifter/CMakeFiles/granularpitchshifter.dir/moc_GranularPitchShifterControls.cpp.o
+[ 93%] Building CXX object plugins/GranularPitchShifter/CMakeFiles/granularpitchshifter.dir/moc_GranularPitchShifterControlDialog.cpp.o
+[ 94%] Building CXX object plugins/GranularPitchShifter/CMakeFiles/granularpitchshifter.dir/qrc_granularpitchshifter.cpp.o
+[ 94%] Linking CXX shared module ../libdualfilter.so
+[ 94%] Linking CXX shared module ../libgranularpitchshifter.so
+[ 95%] Linking CXX shared module ../libflanger.so
+[ 95%] Built target dualfilter
+[ 95%] Generating moc_MandelCloud.cpp
+[ 95%] Building CXX object plugins/MandelCloud/CMakeFiles/mandelcloud.dir/MandelCloud.cpp.o
+[ 95%] Built target granularpitchshifter
+[ 95%] Generating moc_MandelSpectral.cpp
+[ 96%] Building CXX object plugins/MandelSpectral/CMakeFiles/mandelspectral.dir/MandelSpectral.cpp.o
+[ 96%] Built target flanger
+[ 97%] Generating moc_MandelResonator.cpp
+[ 97%] Building CXX object plugins/MandelResonator/CMakeFiles/mandelresonator.dir/MandelResonator.cpp.o
+[ 97%] Linking CXX shared module ../liblb302.so
+[ 97%] Built target lb302
+[ 98%] Building CXX object plugins/MandelCloud/CMakeFiles/mandelcloud.dir/__/MandelCommon/CeciliaDsp.cpp.o
+[ 98%] Building CXX object plugins/MandelSpectral/CMakeFiles/mandelspectral.dir/__/MandelCommon/CeciliaDsp.cpp.o
+[ 98%] Building CXX object plugins/MandelResonator/CMakeFiles/mandelresonator.dir/__/MandelCommon/CeciliaDsp.cpp.o
+[ 98%] Building CXX object plugins/MandelCloud/CMakeFiles/mandelcloud.dir/moc_MandelCloud.cpp.o
+[ 98%] Generating moc_MandelHarmonizer.cpp
+[ 98%] Building CXX object plugins/MandelSpectral/CMakeFiles/mandelspectral.dir/moc_MandelSpectral.cpp.o
+[ 98%] Building CXX object plugins/MandelHarmonizer/CMakeFiles/mandelharmonizer.dir/MandelHarmonizer.cpp.o
+[ 98%] Building CXX object plugins/MandelResonator/CMakeFiles/mandelresonator.dir/moc_MandelResonator.cpp.o
+[ 98%] Linking CXX shared module ../libmandelcloud.so
+[ 98%] Linking CXX shared module ../libmandelspectral.so
+[ 98%] Linking CXX shared module ../libmandelresonator.so
+[ 98%] Built target mandelcloud
+[ 98%] Building CXX object plugins/MandelHarmonizer/CMakeFiles/mandelharmonizer.dir/__/MandelCommon/CeciliaDsp.cpp.o
+[ 98%] Generating moc_MandelFreqShift.cpp
+[ 98%] Building CXX object plugins/MandelFreqShift/CMakeFiles/mandelfreqshift.dir/MandelFreqShift.cpp.o
+[ 98%] Built target mandelspectral
+[ 98%] Generating moc_MandelPhaser.cpp
+[ 98%] Building CXX object plugins/MandelPhaser/CMakeFiles/mandelphaser.dir/MandelPhaser.cpp.o
+[ 98%] Built target mandelresonator
+[ 98%] Building CXX object plugins/MandelHarmonizer/CMakeFiles/mandelharmonizer.dir/moc_MandelHarmonizer.cpp.o
+[ 98%] Building CXX object plugins/MandelFreqShift/CMakeFiles/mandelfreqshift.dir/__/MandelCommon/CeciliaDsp.cpp.o
+[ 98%] Building CXX object plugins/MandelPhaser/CMakeFiles/mandelphaser.dir/__/MandelCommon/CeciliaDsp.cpp.o
+[ 99%] Building CXX object plugins/MandelFreqShift/CMakeFiles/mandelfreqshift.dir/moc_MandelFreqShift.cpp.o
+[100%] Linking CXX shared module ../libmandelharmonizer.so
+[100%] Built target mandelharmonizer
+[100%] Building CXX object plugins/MandelPhaser/CMakeFiles/mandelphaser.dir/moc_MandelPhaser.cpp.o
+[100%] Linking CXX shared module ../libmandelfreqshift.so
+[100%] Built target mandelfreqshift
+[100%] Linking CXX shared module ../libmandelphaser.so
+[100%] Built target mandelphaser

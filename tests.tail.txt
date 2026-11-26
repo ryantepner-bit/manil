@@ -1,0 +1,75 @@
+=== render render_ambient
+exit 0
+|--                                                |      3%   |  |----                                              |      7%   /  |------                                            |     11%   -  |--------                                          |     14%   \  |----------                                        |     18%   |  |-----------                                       |     21%   /  |-------------                                     |     24%   -  |--------------                                    |     27%   \  |----------------                                  |     30%   |  |-----------------                                 |     33%   /  |-------------------                               |     36%   -  |--------------------                              |     39%   \  |----------------------                            |     42%   |  |-----------------------                           |     45%   /  |-------------------------                         |     48%   -  |--------------------------                        |     51%   \  |----------------------------                      |     54%   |  |-----------------------------                     |     57%   /  |-------------------------------                   |     60%   -  |--------------------------------                  |     63%   \  |----------------------------------                |     66%   |  |-----------------------------------               |     69%   /  |-------------------------------------             |     72%   -  |--------------------------------------            |     75%   \  |----------------------------------------          |     78%   |  |-----------------------------------------         |     81%   /  |-------------------------------------------       |     84%   -  |--------------------------------------------      |     87%   \  |----------------------------------------------    |     90%   |  |------------------------------------------------  |     94%   /  |------------------------------------------------- |     97%   -  |--------------------------------------------------|     99%   \  PERFLOG |       Project Render | 20.80user, 0.57system 6.48elapsed
+Loading project...
+Done
+
+Samples read:           4734464
+Length (seconds):     53.678730
+Scaled by:         2147483647.0
+Maximum amplitude:     0.949951
+Minimum amplitude:    -0.915375
+Midline amplitude:     0.017288
+Mean    norm:          0.189150
+Mean    amplitude:     0.000187
+RMS     amplitude:     0.231310
+Maximum delta:         0.861298
+Minimum delta:         0.000000
+Mean    delta:         0.107049
+RMS     delta:         0.137201
+Rough   frequency:         4163
+Volume adjustment:        1.053
+=== render render_breakbeat
+exit 0
+|-----------                                       |     21%   |  |------------------------                          |     46%   /  |------------------------------------              |     71%   -  |------------------------------------------------  |     94%   \  PERFLOG |       Project Render | 2.41user, 0.29system 0.87elapsed
+Loading project...
+Done
+
+Samples read:           2116608
+Length (seconds):     23.997823
+Scaled by:         2147483647.0
+Maximum amplitude:     0.814362
+Minimum amplitude:    -0.863190
+Midline amplitude:    -0.024414
+Mean    norm:          0.129942
+Mean    amplitude:     0.001270
+RMS     amplitude:     0.168061
+Maximum delta:         0.245239
+Minimum delta:         0.000000
+Mean    delta:         0.035199
+RMS     delta:         0.044772
+Rough   frequency:         1869
+Volume adjustment:        1.158
+=== render render_idm
+exit 0
+|--------                                          |     14%   |  |---------------                                   |     28%   /  |----------------------                            |     42%   -  |-----------------------------                     |     56%   \  |------------------------------------              |     70%   |  |-------------------------------------------       |     85%   /  PERFLOG |       Project Render | 3.56user, 0.36system 1.32elapsed
+Loading project...
+Done
+
+Samples read:           2810880
+Length (seconds):     31.869388
+Scaled by:         2147483647.0
+Maximum amplitude:     0.999969
+Minimum amplitude:    -0.999969
+Midline amplitude:     0.000000
+Mean    norm:          0.127496
+Mean    amplitude:     0.002440
+RMS     amplitude:     0.171026
+Maximum delta:         0.453217
+Minimum delta:         0.000000
+Mean    delta:         0.047933
+RMS     delta:         0.062940
+Rough   frequency:         2583
+Volume adjustment:        1.000
+total 1324
+drwxr-xr-x 2 runner runner   4096 Nov 26 11:20 .
+drwxr-xr-x 9 runner runner   4096 Nov 26 11:20 ..
+-rw-r--r-- 1 runner runner 644493 Nov 26 11:20 render_ambient.mp3
+-rw-r--r-- 1 runner runner   2236 Nov 26 11:20 render_ambient.render.log
+-rw-r--r-- 1 runner runner    480 Nov 26 11:20 render_ambient.stat.txt
+-rw-r--r-- 1 runner runner 288392 Nov 26 11:20 render_breakbeat.mp3
+-rw-r--r-- 1 runner runner    359 Nov 26 11:20 render_breakbeat.render.log
+-rw-r--r-- 1 runner runner    480 Nov 26 11:20 render_breakbeat.stat.txt
+-rw-r--r-- 1 runner runner 382746 Nov 26 11:20 render_idm.mp3
+-rw-r--r-- 1 runner runner    493 Nov 26 11:20 render_idm.render.log
+-rw-r--r-- 1 runner runner    480 Nov 26 11:20 render_idm.stat.txt

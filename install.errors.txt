@@ -1,0 +1,3 @@
+2202:-- Installing: /home/runner/work/manil/manil/inst/share/lmms/samples/drumsynth/misc/terror_n_yr_hood_snare.ds
+2966:-- Installing: /home/runner/work/manil/manil/inst/share/lmms/themes/classic/error.png
+3235:-- Installing: /home/runner/work/manil/manil/inst/share/lmms/themes/default/error.png
