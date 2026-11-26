@@ -1,0 +1,118 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 9b93e26..105504f 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -51,13 +51,15 @@ INCLUDE(GenerateExportHeader)
+ include(StaticDependencies)
+ 
+ STRING(TOUPPER          "${CMAKE_PROJECT_NAME}" PROJECT_NAME_UCASE)
++# MANDELBROT: product name shown to users (installer, Start menu, file types); binaries keep "lmms"
++SET(PROJECT_NAME_UCASE "MANDELBROT")
+ 
+ SET(PROJECT_YEAR 2026)
+ 
+ SET(PROJECT_AUTHOR      "LMMS Developers")
+ SET(PROJECT_URL         "https://lmms.io")
+ SET(PROJECT_EMAIL       "lmms-devel@lists.sourceforge.net")
+-SET(PROJECT_DESCRIPTION "${PROJECT_NAME_UCASE} - Free music production software")
++SET(PROJECT_DESCRIPTION "${PROJECT_NAME_UCASE} - generative music workstation (built on LMMS)")
+ SET(PROJECT_COPYRIGHT   "2008-${PROJECT_YEAR} ${PROJECT_AUTHOR}")
+ SET(VERSION_MAJOR       "1")
+ SET(VERSION_MINOR       "3")
+diff --git a/src/core/main.cpp b/src/core/main.cpp
+index c1e72b9..787a68a 100644
+--- a/src/core/main.cpp
++++ b/src/core/main.cpp
+@@ -65,6 +65,7 @@
+ #include "Hardware.h"
+ #include "ImportFilter.h"
+ #include "MainWindow.h"
++#include "WelcomeScreen.h"
+ #include "MixHelpers.h"
+ #include "OutputSettings.h"
+ #include "ProjectRenderer.h"
+@@ -901,6 +902,8 @@ int main( int argc, char * * argv )
+ 		else
+ 		{
+ 			Engine::getSong()->createNewProject();
++			// MANDELBROT: offer the generative templates / blank project / recent projects
++			gui::WelcomeScreen::showAtStartup(getGUI()->mainWindow());
+ 		}
+ 
+ 		// Finally we start the auto save timer and also trigger the
+diff --git a/src/gui/CMakeLists.txt b/src/gui/CMakeLists.txt
+index 8d21233..4ea9c79 100644
+--- a/src/gui/CMakeLists.txt
++++ b/src/gui/CMakeLists.txt
+@@ -68,6 +68,7 @@ SET(LMMS_SRCS
+ 	gui/instrument/InstrumentTuningView.cpp
+ 	gui/instrument/FractalGeneratorView.cpp
+ 	gui/FractalWindow.cpp
++	gui/WelcomeScreen.cpp
+ 	gui/instrument/InstrumentSoundShapingView.cpp
+ 	gui/instrument/InstrumentTrackWindow.cpp
+ 	gui/instrument/InstrumentView.cpp
+diff --git a/src/gui/MainWindow.cpp b/src/gui/MainWindow.cpp
+index 806954a..baa4769 100644
+--- a/src/gui/MainWindow.cpp
++++ b/src/gui/MainWindow.cpp
+@@ -24,6 +24,9 @@
+ 
+ #include "MainWindow.h"
+ #include "FractalWindow.h"
++#include "FractalEngine.h"
++#include "WelcomeScreen.h"
++#include <QToolButton>
+ 
+ #include <QApplication>
+ #include <QCloseEvent>
+@@ -288,6 +291,13 @@ void MainWindow::finalize()
+ 	auto templates_menu = new TemplatesMenu( this );
+ 	project_menu->addMenu(templates_menu);
+ 
++	// MANDELBROT: the start screen (generative templates, blank project, recent)
++	project_menu->addAction(embed::getIconPixmap("fractal_window"), tr("Start screen..."), this, [this] {
++		auto w = new WelcomeScreen(this);
++		w->setAttribute(Qt::WA_DeleteOnClose);
++		w->open();
++	});
++
+ 	addAction(project_menu, "project_open", tr("&Open..."),
+ 		QKeySequence::Open, &MainWindow::openProject);
+ 
+@@ -472,6 +482,28 @@ void MainWindow::finalize()
+ 		tr("Fractal engine") + " (Ctrl+8)", this, SLOT(toggleFractalWin()), m_toolBar);
+ 	fractal_window->setShortcut(keySequence(Qt::CTRL, Qt::Key_8));
+ 	m_toolBarLayout->addWidget( fractal_window, 1, 8 );
++
++	// MANDELBROT: master switch for the fractal engine (off = a normal DAW, nothing is generated)
++	auto fractalSwitch = new QToolButton(m_toolBar);
++	fractalSwitch->setText(tr("FRACTAL"));
++	fractalSwitch->setCheckable(true);
++	fractalSwitch->setToolTip(tr("Fractal engine on/off. Off: tracks only play what you wrote."));
++	fractalSwitch->setStyleSheet("QToolButton { color:#8a93a6; background:#1b1f2a; border:1px solid #2b3140; border-radius:4px;"
++		" padding:2px 8px; font-weight:bold; } QToolButton:checked { color:#06121a; background:#28dcff; border-color:#28dcff; }");
++	if (FractalEngine::instance() != nullptr)
++	{
++		auto& enabled = FractalEngine::instance()->m_enabledModel;
++		fractalSwitch->setChecked(enabled.value());
++		connect(fractalSwitch, &QToolButton::toggled, this, [](bool on) {
++			if (FractalEngine::instance() != nullptr) { FractalEngine::instance()->m_enabledModel.setValue(on); }
++		});
++		connect(&enabled, &Model::dataChanged, fractalSwitch, [fractalSwitch] {
++			if (FractalEngine::instance() == nullptr) { return; }
++			const bool on = FractalEngine::instance()->m_enabledModel.value();
++			if (fractalSwitch->isChecked() != on) { fractalSwitch->setChecked(on); }
++		});
++	}
++	m_toolBarLayout->addWidget( fractalSwitch, 1, 9 );
+ 	m_toolBarLayout->setColumnStretch( 100, 1 );
+ 
+ 	// setup-dialog opened before?
+@@ -597,7 +629,7 @@ void MainWindow::resetWindowTitle()
+ 		title += " - " + tr( "Recover session. Please save your work!" );
+ 	}
+ 
+-	setWindowTitle( title + " - " + tr( "LMMS %1" ).arg( LMMS_VERSION ) );
++	setWindowTitle( title + " - " + tr( "MANDELBROT %1" ).arg( LMMS_VERSION ) );
+ }
