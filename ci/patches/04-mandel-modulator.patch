@@ -1,0 +1,86 @@
+diff --git a/include/Controller.h b/include/Controller.h
+index fe78c55..82e4843 100644
+--- a/include/Controller.h
++++ b/include/Controller.h
+@@ -57,6 +57,7 @@ public:
+ 		Lfo,
+ 		Midi,
+ 		Peak,
++		Mandel, //!< MANDELBROT: fractal / random modulator
+ 		/*
+ 		XY,
+ 		Equation
+@@ -95,6 +96,7 @@ public:
+ 		{
+ 			case ControllerType::Lfo: return( true );
+ 			case ControllerType::Peak: return( true );
++			case ControllerType::Mandel: return( true );
+ 			default:
+ 				break;
+ 		}
+diff --git a/src/core/CMakeLists.txt b/src/core/CMakeLists.txt
+index 297d676..e8a9a9f 100644
+--- a/src/core/CMakeLists.txt
++++ b/src/core/CMakeLists.txt
+@@ -45,6 +45,7 @@ set(LMMS_SRCS
+ 	core/MicroTimer.cpp
+ 	core/Microtuner.cpp
+ 	core/FractalEngine.cpp
++	core/MandelModulator.cpp
+ 	core/FractalGenerator.cpp
+ 	core/fractal/FractalMath.cpp
+ 	core/fractal/PhraseHistory.cpp
+diff --git a/src/core/Controller.cpp b/src/core/Controller.cpp
+index 9218e32..59cfd06 100644
+--- a/src/core/Controller.cpp
++++ b/src/core/Controller.cpp
+@@ -32,6 +32,7 @@
+ #include "ControllerConnection.h"
+ #include "ControllerDialog.h"
+ #include "LfoController.h"
++#include "MandelModulator.h"
+ #include "MidiController.h"
+ #include "PeakController.h"
+ 
+@@ -209,6 +210,10 @@ Controller * Controller::create( ControllerType _ct, Model * _parent )
+ 			c = new class MidiController( _parent );
+ 			break;
+ 
++		case ControllerType::Mandel:
++			c = new class MandelModulator( _parent );
++			break;
++
+ 		default: 
+ 			break;
+ 	}
+diff --git a/src/gui/ControllerRackView.cpp b/src/gui/ControllerRackView.cpp
+index 508b419..d3d2e17 100644
+--- a/src/gui/ControllerRackView.cpp
++++ b/src/gui/ControllerRackView.cpp
+@@ -37,6 +37,9 @@
+ #include "embed.h"
+ #include "GuiApplication.h"
+ #include "LfoController.h"
++#include "MandelModulator.h"
++#include <QCursor>
++#include <QMenu>
+ #include "MainWindow.h"
+ #include "Song.h"
+ #include "SubWindow.h"
+@@ -220,9 +223,13 @@ void ControllerRackView::removeController(Controller* removedController)
+ 
+ void ControllerRackView::addController()
+ {
+-	// TODO: Eventually let the user pick from available controller types
+-
+-	Engine::getSong()->addController( new LfoController( Engine::getSong() ) );
++	// MANDELBROT: pick the controller type
++	QMenu menu(this);
++	auto lfo = menu.addAction(tr("LFO controller"));
++	auto mandel = menu.addAction(tr("Mandel modulator (fractal readings / pyo random)"));
++	QAction* chosen = menu.exec(QCursor::pos());
++	if (chosen == lfo) { Engine::getSong()->addController(new LfoController(Engine::getSong())); }
++	else if (chosen == mandel) { Engine::getSong()->addController(new MandelModulator(Engine::getSong())); }
+ 
+ 	// fix bug which always made ControllerRackView loose focus when adding
+ 	// new controller
