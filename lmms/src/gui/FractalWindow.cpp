@@ -18,6 +18,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPushButton>
+#include <QTabWidget>
 #include <QTimer>
 #include <QTreeWidget>
 #include <QVBoxLayout>
@@ -33,6 +34,7 @@
 #include "FractalGenerator.h"
 #include "InstrumentTrack.h"
 #include "Knob.h"
+#include "LcdSpinBox.h"
 #include "LedCheckBox.h"
 #include "Song.h"
 #include "embed.h"
@@ -45,7 +47,7 @@ FractalSetView::FractalSetView(QWidget* parent) : QWidget(parent)
 {
 	setMinimumSize(320, 320);
 	setCursor(Qt::CrossCursor);
-	setToolTip(tr("Click: move the probe there (from the next phrase).  Wheel: zoom the view."));
+	setToolTip(tr("Click: move the probe there and make it the anchor (orbit / box centre).  Wheel: zoom the view."));
 	m_timer = new QTimer(this);
 	connect(m_timer, SIGNAL(timeout()), this, SLOT(tick()));
 	m_timer->start(100);
@@ -124,6 +126,35 @@ void FractalSetView::paintEvent(QPaintEvent*)
 	const double half = zoom / s * 0.5;
 	p.setPen(QPen(QColor(255, 255, 255, 120), 1, Qt::DashLine));
 	p.drawRect(QRectF(probe.x() - half, probe.y() - half, half * 2, half * 2));
+	// anchor (orbit / box centre), the box, the bookmarks
+	const QPointF anchor = toScreen(fe->anchorX(), fe->anchorY());
+	const double box = fe->m_boxModel.value();
+	if (box > 0.0)
+	{
+		const double hb = box / s;
+		p.setPen(QPen(QColor(40, 220, 255, 150), 1, Qt::DotLine));
+		p.drawRect(QRectF(anchor.x() - hb, anchor.y() - hb, hb * 2, hb * 2));
+	}
+	if (fe->m_probeModeModel.value() == fractal::GlobalSettings::Orbit)
+	{
+		const double r = fe->m_orbitRadiusModel.value() * zoom / s;
+		p.setPen(QPen(QColor(40, 220, 255, 150), 1, Qt::DotLine));
+		p.drawEllipse(anchor, r, r);
+	}
+	p.setPen(QPen(QColor(40, 220, 255), 1));
+	p.drawLine(anchor + QPointF(-4, -4), anchor + QPointF(4, 4));
+	p.drawLine(anchor + QPointF(-4, 4), anchor + QPointF(4, -4));
+	for (int i = 0; i < 4; ++i)
+	{
+		if (!fe->bookmarkUsed(i)) { continue; }
+		const QPointF bq = toScreen(fe->bookmarkX(i), fe->bookmarkY(i));
+		p.setBrush(QColor(169, 139, 255));
+		p.setPen(Qt::NoPen);
+		p.drawEllipse(bq, 4, 4);
+		p.setPen(QColor(220, 210, 255));
+		p.drawText(bq + QPointF(6, -6), QString::number(i + 1));
+		p.setBrush(Qt::NoBrush);
+	}
 	p.setPen(QPen(QColor(255, 90, 160), 2));
 	p.drawEllipse(probe, 6, 6);
 	p.drawLine(probe + QPointF(-11, 0), probe + QPointF(-7, 0));
@@ -142,7 +173,7 @@ void FractalSetView::mousePressEvent(QMouseEvent* e)
 	const double s = m_viewScale / std::max(1, std::min(width(), height()));
 	const double x = m_centreX + (e->pos().x() - width() * 0.5) * s;
 	const double y = m_centreY + (e->pos().y() - height() * 0.5) * s;
-	fe->conductor().moveProbe(x, y);
+	fe->placeProbe(x, y);
 	m_centreX = x; m_centreY = y; m_dirty = true;
 	update();
 }
@@ -182,94 +213,220 @@ FractalWindow::FractalWindow() : QWidget()
 
 	auto root = new QHBoxLayout(this);
 	root->setContentsMargins(6, 6, 6, 6);
+	auto left = new QVBoxLayout();
+	root->addLayout(left, 3);
 	m_set = new FractalSetView(this);
-	root->addWidget(m_set, 3);
-
-	auto side = new QVBoxLayout();
-	root->addLayout(side, 2);
-
-	auto grid = new QGridLayout();
-	grid->setVerticalSpacing(3);
-	m_enabled = new LedCheckBox(tr("Engine on"), this);
-	m_enabled->setModel(&fe->m_enabledModel);
-	grid->addWidget(m_enabled, 0, 0, 1, 2);
-	m_fractalKey = new LedCheckBox(tr("Set chooses the mode"), this);
-	m_fractalKey->setModel(&fe->m_fractalKeyModel);
-	grid->addWidget(m_fractalKey, 0, 2, 1, 2);
-
-	auto addCombo = [&](int row, int col, const QString& label, ComboBoxModel* m) {
-		grid->addWidget(makeSmallLabel(label), row, col);
-		auto c = new ComboBox(this);
-		c->setFixedHeight(ComboBox::DEFAULT_HEIGHT);
-		c->setModel(m);
-		grid->addWidget(c, row + 1, col);
-		return c;
-	};
-	m_style = addCombo(1, 0, tr("Style"), &fe->m_styleModel);
-	m_root = addCombo(1, 1, tr("Key"), &fe->m_rootModel);
-	m_scale = addCombo(1, 2, tr("Scale"), &fe->m_scaleModel);
-	m_chordSpeed = addCombo(3, 0, tr("Chords"), &fe->m_chordSpeedModel);
-	m_phraseBars = addCombo(3, 1, tr("Phrase"), &fe->m_phraseBarsModel);
-	m_noveltyMode = addCombo(3, 2, tr("Avoid repeating"), &fe->m_noveltyModeModel);
-	side->addLayout(grid);
-
-	auto knobs = new QHBoxLayout();
-	m_drift = makeKnob(this, tr("DRIFT"), tr("Drift (how fast the probe wanders):"), &fe->m_driftModel);
-	m_zoom = makeKnob(this, tr("ZOOM"), tr("Zoom (size of the region that is read):"), &fe->m_zoomModel);
-	m_complexity = makeKnob(this, tr("CPLX"), tr("Complexity:"), &fe->m_complexityModel);
-	m_control = makeKnob(this, tr("FRACT"), tr("Fractal control (how much the set decides the rules):"), &fe->m_fractalControlModel);
-	m_swing = makeKnob(this, tr("SWING"), tr("Swing:"), &fe->m_swingModel);
-	m_novelty = makeKnob(this, tr("NEW"), tr("Novelty (how hard old material is avoided):"), &fe->m_noveltyModel);
-	for (auto* k : {m_drift, m_zoom, m_complexity, m_control, m_swing, m_novelty}) { knobs->addWidget(k); }
-	side->addLayout(knobs);
-
-	auto dir = new QPushButton(tr("New direction"), this);
-	dir->setToolTip(tr("Re-seeds the probe's walk: from the next phrase the music heads somewhere new"));
-	connect(dir, SIGNAL(clicked()), this, SLOT(newDirection()));
-	side->addWidget(dir);
-
+	left->addWidget(m_set, 1);
 	m_reading = new QLabel(this);
 	m_reading->setWordWrap(true);
 	m_reading->setFont(adjustedToPixelSize(m_reading->font(), DEFAULT_FONT_SIZE));
-	m_reading->setMinimumHeight(120);
+	m_reading->setMinimumHeight(110);
 	m_reading->setAlignment(Qt::AlignTop | Qt::AlignLeft);
-	side->addWidget(m_reading);
+	left->addWidget(m_reading);
 
-	// history
-	auto histHead = new QHBoxLayout();
-	auto ht = new QLabel(tr("PHRASE HISTORY"));
-	ht->setFont(adjustedToPixelSize(ht->font(), DEFAULT_FONT_SIZE + 1));
-	histHead->addWidget(ht);
-	m_historyCount = makeSmallLabel("");
-	histHead->addWidget(m_historyCount, 1);
-	side->addLayout(histHead);
-	m_history = new QTreeWidget(this);
-	m_history->setColumnCount(5);
-	m_history->setHeaderLabels({tr("When"), tr("Track"), tr("Role"), tr("Bars"), tr("Notes")});
-	m_history->setRootIsDecorated(false);
-	m_history->setSelectionMode(QAbstractItemView::SingleSelection);
-	m_history->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
-	side->addWidget(m_history, 1);
-	auto histButtons = new QHBoxLayout();
-	m_targetTrack = new QComboBox(this);
-	m_targetTrack->setToolTip(tr("Track that receives the phrase"));
-	histButtons->addWidget(m_targetTrack, 1);
-	auto send = new QPushButton(tr("To clip"), this);
-	send->setToolTip(tr("Write the selected phrase into a MIDI clip on the chosen track, at the play head"));
-	connect(send, SIGNAL(clicked()), this, SLOT(sendToTrack()));
-	histButtons->addWidget(send);
-	auto fav = new QPushButton(tr("Favourite"), this);
-	connect(fav, SIGNAL(clicked()), this, SLOT(toggleFavourite()));
-	histButtons->addWidget(fav);
-	auto clr = new QPushButton(tr("Clear"), this);
-	connect(clr, SIGNAL(clicked()), this, SLOT(clearHistory()));
-	histButtons->addWidget(clr);
-	side->addLayout(histButtons);
+	auto side = new QVBoxLayout();
+	root->addLayout(side, 2);
+	auto top = new QHBoxLayout();
+	auto enabled = new LedCheckBox(tr("Engine on"), this);
+	enabled->setModel(&fe->m_enabledModel);
+	top->addWidget(enabled);
+	auto freeze = new LedCheckBox(tr("Freeze probe"), this);
+	freeze->setModel(&fe->m_freezeModel);
+	top->addWidget(freeze);
+	top->addStretch();
+	auto dir = new QPushButton(tr("New direction"), this);
+	dir->setToolTip(tr("Re-seeds the probe's walk: from the next phrase the music heads somewhere new"));
+	connect(dir, SIGNAL(clicked()), this, SLOT(newDirection()));
+	top->addWidget(dir);
+	side->addLayout(top);
+
+	auto tabs = new QTabWidget(this);
+	tabs->addTab(buildProbeTab(), tr("Probe"));
+	tabs->addTab(buildMusicTab(), tr("Music"));
+	tabs->addTab(buildHistoryTab(), tr("History"));
+	side->addWidget(tabs, 1);
+
+	connect(fe, &FractalEngine::bookmarksChanged, this, [this] { refreshBookmarks(); });
+	refreshBookmarks();
 
 	m_timer = new QTimer(this);
 	connect(m_timer, SIGNAL(timeout()), this, SLOT(refresh()));
 	m_timer->start(250);
 	refreshHistory();
+}
+
+namespace
+{
+ComboBox* makeCombo(QWidget* parent, ComboBoxModel* m)
+{
+	auto c = new ComboBox(parent);
+	c->setFixedHeight(ComboBox::DEFAULT_HEIGHT);
+	c->setModel(m);
+	return c;
+}
+
+LcdSpinBox* makeLcd(QWidget* parent, int digits, const QString& label, const QString& tip, IntModel* m)
+{
+	auto l = new LcdSpinBox(digits, parent, label);
+	l->setLabel(label);
+	l->setModel(m);
+	l->setToolTip(tip);
+	return l;
+}
+
+QLabel* sectionLabel(const QString& t)
+{
+	auto l = new QLabel(QString("<b style='color:#28dcff'>%1</b>").arg(t));
+	return l;
+}
+}
+
+QWidget* FractalWindow::buildProbeTab()
+{
+	auto* fe = FractalEngine::instance();
+	auto w = new QWidget(this);
+	auto v = new QVBoxLayout(w);
+	v->setSpacing(6);
+
+	v->addWidget(sectionLabel(tr("MOVEMENT")));
+	auto modeRow = new QHBoxLayout();
+	modeRow->addWidget(makeSmallLabel(tr("Mode")));
+	auto mode = makeCombo(w, &fe->m_probeModeModel);
+	mode->setToolTip(tr("Edge walk: wanders, drawn to the boundary.  Free walk: wanders anywhere.\n"
+		"Orbit: circles the anchor (the last point you clicked).  Path: glides between the bookmarks.\n"
+		"Jumps: teleports to a new boundary point every few bars.  Locked: stays still."));
+	modeRow->addWidget(mode, 1);
+	v->addLayout(modeRow);
+
+	auto move = new QHBoxLayout();
+	move->addWidget(makeKnob(w, tr("SPEED"), tr("Probe speed:"), &fe->m_driftModel));
+	move->addWidget(makeKnob(w, tr("TURN"), tr("How much the heading wanders:"), &fe->m_turnModel));
+	move->addWidget(makeKnob(w, tr("EDGE"), tr("Pull towards the boundary (edge walk):"), &fe->m_edgePullModel));
+	move->addWidget(makeKnob(w, tr("ORBIT"), tr("Orbit radius (in read radii):"), &fe->m_orbitRadiusModel));
+	move->addWidget(makeKnob(w, tr("BOX"), tr("Boundary box half-size around the anchor (0 = no box):"), &fe->m_boxModel));
+	v->addLayout(move);
+	auto moveLcd = new QHBoxLayout();
+	moveLcd->addWidget(makeLcd(w, 1, tr("STEPS"), tr("Probe moves per bar"), &fe->m_stepsModel));
+	moveLcd->addWidget(makeLcd(w, 2, tr("JUMP"), tr("Bars between jumps (Jumps mode)"), &fe->m_jumpBarsModel));
+	moveLcd->addStretch();
+	v->addLayout(moveLcd);
+
+	v->addWidget(sectionLabel(tr("READING")));
+	auto read = new QHBoxLayout();
+	read->addWidget(makeKnob(w, tr("RADIUS"), tr("Read radius (size of the neighbourhood that is read):"), &fe->m_zoomModel));
+	read->addWidget(makeKnob(w, tr("BREATH"), tr("How much the read radius swells phrase to phrase:"), &fe->m_breatheModel));
+	read->addWidget(makeLcd(w, 4, tr("DEPTH"), tr("Iteration depth: higher reads finer detail near the boundary"), &fe->m_maxIterModel));
+	read->addWidget(makeLcd(w, 2, tr("RES"), tr("Read resolution: samples per side of the neighbourhood"), &fe->m_readGridModel));
+	read->addStretch();
+	v->addLayout(read);
+
+	v->addWidget(sectionLabel(tr("BOOKMARKS")));
+	auto bm = new QGridLayout();
+	for (int i = 0; i < 4; ++i)
+	{
+		auto store = new QPushButton(tr("Store %1").arg(i + 1), w);
+		store->setToolTip(tr("Remember the probe's position in slot %1").arg(i + 1));
+		connect(store, &QPushButton::clicked, this, [i] { if (auto* e = FractalEngine::instance()) { e->storeBookmark(i); } });
+		m_goBook[i] = new QPushButton(tr("Go %1").arg(i + 1), w);
+		m_goBook[i]->setToolTip(tr("Jump to bookmark %1 (it becomes the anchor). Right-click: forget it").arg(i + 1));
+		m_goBook[i]->setContextMenuPolicy(Qt::CustomContextMenu);
+		connect(m_goBook[i], &QPushButton::clicked, this, [i] { if (auto* e = FractalEngine::instance()) { e->recallBookmark(i); } });
+		connect(m_goBook[i], &QPushButton::customContextMenuRequested, this, [i] {
+			if (auto* e = FractalEngine::instance()) { e->clearBookmark(i); }
+		});
+		bm->addWidget(store, 0, i);
+		bm->addWidget(m_goBook[i], 1, i);
+	}
+	v->addLayout(bm);
+	v->addWidget(makeSmallLabel(tr("Path mode glides through the stored bookmarks in order.")));
+	v->addStretch();
+	return w;
+}
+
+QWidget* FractalWindow::buildMusicTab()
+{
+	auto* fe = FractalEngine::instance();
+	auto w = new QWidget(this);
+	auto v = new QVBoxLayout(w);
+	v->setSpacing(6);
+
+	v->addWidget(sectionLabel(tr("KEY AND HARMONY")));
+	auto key = new QGridLayout();
+	key->addWidget(makeSmallLabel(tr("Key")), 0, 0);
+	key->addWidget(makeCombo(w, &fe->m_rootModel), 1, 0);
+	key->addWidget(makeSmallLabel(tr("Scale")), 0, 1);
+	key->addWidget(makeCombo(w, &fe->m_scaleModel), 1, 1);
+	key->addWidget(makeSmallLabel(tr("Harmonic rhythm")), 0, 2);
+	key->addWidget(makeCombo(w, &fe->m_chordSpeedModel), 1, 2);
+	auto fk = new LedCheckBox(tr("The set chooses the mode"), w);
+	fk->setModel(&fe->m_fractalKeyModel);
+	key->addWidget(fk, 2, 0, 1, 2);
+	key->addWidget(makeCombo(w, &fe->m_paletteModel), 2, 2);
+	v->addLayout(key);
+
+	v->addWidget(sectionLabel(tr("RHYTHM AND PHRASING")));
+	auto rk = new QHBoxLayout();
+	rk->addWidget(makeKnob(w, tr("SUSTAIN"), tr("Sustain: 0 short and busy, 1 long, sparse, slow harmony:"), &fe->m_sustainModel));
+	rk->addWidget(makeKnob(w, tr("SYNC"), tr("Syncopation: how far parts move off the beat:"), &fe->m_syncopationModel));
+	rk->addWidget(makeKnob(w, tr("SWING"), tr("Swing:"), &fe->m_swingModel));
+	rk->addWidget(makeKnob(w, tr("CPLX"), tr("Complexity:"), &fe->m_complexityModel));
+	rk->addWidget(makeKnob(w, tr("FRACT"), tr("Fractal control (how much the set decides the rules):"), &fe->m_fractalControlModel));
+	v->addLayout(rk);
+	auto rc = new QGridLayout();
+	rc->addWidget(makeSmallLabel(tr("Grid")), 0, 0);
+	rc->addWidget(makeCombo(w, &fe->m_gridModel), 1, 0);
+	rc->addWidget(makeSmallLabel(tr("Phrase length")), 0, 1);
+	rc->addWidget(makeCombo(w, &fe->m_phraseBarsModel), 1, 1);
+	v->addLayout(rc);
+
+	v->addWidget(sectionLabel(tr("NOVELTY")));
+	auto nv = new QHBoxLayout();
+	nv->addWidget(makeKnob(w, tr("NEW"), tr("Novelty (how hard old material is avoided):"), &fe->m_noveltyModel));
+	auto nm = new QVBoxLayout();
+	nm->addWidget(makeSmallLabel(tr("Avoid repeating")));
+	nm->addWidget(makeCombo(w, &fe->m_noveltyModeModel));
+	nv->addLayout(nm, 1);
+	v->addLayout(nv);
+	v->addStretch();
+	return w;
+}
+
+QWidget* FractalWindow::buildHistoryTab()
+{
+	auto w = new QWidget(this);
+	auto v = new QVBoxLayout(w);
+	m_historyCount = makeSmallLabel("");
+	v->addWidget(m_historyCount);
+	m_history = new QTreeWidget(w);
+	m_history->setColumnCount(5);
+	m_history->setHeaderLabels({tr("When"), tr("Track"), tr("Role"), tr("Bars"), tr("Notes")});
+	m_history->setRootIsDecorated(false);
+	m_history->setSelectionMode(QAbstractItemView::SingleSelection);
+	m_history->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+	v->addWidget(m_history, 1);
+	auto histButtons = new QHBoxLayout();
+	m_targetTrack = new QComboBox(w);
+	m_targetTrack->setToolTip(tr("Track that receives the phrase"));
+	histButtons->addWidget(m_targetTrack, 1);
+	auto send = new QPushButton(tr("To clip"), w);
+	send->setToolTip(tr("Write the selected phrase into a MIDI clip on the chosen track, at the play head"));
+	connect(send, SIGNAL(clicked()), this, SLOT(sendToTrack()));
+	histButtons->addWidget(send);
+	auto fav = new QPushButton(tr("Favourite"), w);
+	connect(fav, SIGNAL(clicked()), this, SLOT(toggleFavourite()));
+	histButtons->addWidget(fav);
+	auto clr = new QPushButton(tr("Clear"), w);
+	connect(clr, SIGNAL(clicked()), this, SLOT(clearHistory()));
+	histButtons->addWidget(clr);
+	v->addLayout(histButtons);
+	return w;
+}
+
+void FractalWindow::refreshBookmarks()
+{
+	auto* fe = FractalEngine::instance();
+	if (fe == nullptr) { return; }
+	for (int i = 0; i < 4; ++i) { m_goBook[i]->setEnabled(fe->bookmarkUsed(i)); }
 }
 
 void FractalWindow::refresh()
@@ -328,7 +485,7 @@ void FractalWindow::refreshHistory()
 		item->setText(3, QString::number(r.bars));
 		item->setText(4, QString::number(r.notes.size()));
 		item->setData(0, Qt::UserRole, QVariant::fromValue<qulonglong>(r.id));
-		item->setToolTip(0, tr("From %1 %2i, %3").arg(r.cx, 0, 'f', 6).arg(r.cy, 0, 'f', 6).arg(fractal::styleName(r.style)));
+		item->setToolTip(0, tr("From %1 %2i").arg(r.cx, 0, 'f', 6).arg(r.cy, 0, 'f', 6));
 	}
 	m_historyCount->setText(tr("%1 phrases remembered").arg(fe->history().size()));
 	// tracks that can receive a phrase

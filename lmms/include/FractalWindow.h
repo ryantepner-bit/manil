@@ -67,21 +67,13 @@ private slots:
 	void newDirection();
 
 private:
+	QWidget* buildProbeTab();
+	QWidget* buildMusicTab();
+	QWidget* buildHistoryTab();
+	void refreshBookmarks();
+
 	FractalSetView* m_set;
-	ComboBox* m_style;
-	ComboBox* m_root;
-	ComboBox* m_scale;
-	ComboBox* m_noveltyMode;
-	ComboBox* m_chordSpeed;
-	ComboBox* m_phraseBars;
-	LedCheckBox* m_enabled;
-	LedCheckBox* m_fractalKey;
-	Knob* m_drift;
-	Knob* m_zoom;
-	Knob* m_complexity;
-	Knob* m_control;
-	Knob* m_swing;
-	Knob* m_novelty;
+	QPushButton* m_goBook[4];
 	QLabel* m_reading;
 	QLabel* m_historyCount;
 	QTreeWidget* m_history;
