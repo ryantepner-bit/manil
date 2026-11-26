@@ -57,7 +57,6 @@ constexpr int NumDrumLanes = static_cast<int>(Role::Shaker) - static_cast<int>(R
 
 struct GlobalSettings
 {
-	Style style = Style::IDM;
 	int root = 9;             //!< A
 	int scale = scales::Dorian;
 	bool fractalKey = false;  //!< let the set choose the mode per section
@@ -69,8 +68,32 @@ struct GlobalSettings
 	float novelty = 0.8f;     //!< how strongly old material is avoided
 	NoveltyMode noveltyMode = NoveltyMode::Recent;
 	int chordSpeed = 0;       //!< 0 = the set decides, else bars per chord
-	int phraseBars = 0;       //!< 0 = style default (IDM 4, Ambient 8, Breakbeat 4)
+	int phraseBars = 0;       //!< 0 = 4 bars (8 when sustain >= 0.5)
+
+	// ---- music, as technical controls (these replace the old style presets)
+	float sustain = 0.0f;     //!< 0 = short, busy notes .. 1 = long, sparse, slow harmony
+	float syncopation = 0.0f; //!< 0 = on the grid .. 1 = broken, off-beat (bass avoids the downbeats)
+	int palette = 0;          //!< mode palette when the set chooses the mode: 0 dark, 1 bright
+	int grid = 0;             //!< 0 = the set decides (odd periods give triplets), 1 straight, 2 triplets
+
+	// ---- the probe
+	enum ProbeMode { EdgeWalk = 0, FreeWalk, Orbit, Path, Jumps, Locked, NumProbeModes };
+	int probeMode = EdgeWalk;
+	float turn = 0.5f;        //!< how much the heading wanders per step
+	float edgePull = 0.6f;    //!< how strongly the walk is drawn to the boundary of the set
+	int stepsPerBar = 1;      //!< probe moves per bar (1..8)
+	int maxIter = 300;        //!< iteration depth of the readings (60..2000)
+	int readGrid = 8;         //!< neighbourhood samples per side (4..16)
+	float breathe = 0.3f;     //!< how much the read radius swells from phrase to phrase
+	float orbitRadius = 0.5f; //!< Orbit mode: radius, in read radii
+	int jumpBars = 8;         //!< Jumps mode: bars between jumps
+	float boxSize = 0.0f;     //!< > 0: the probe stays inside a box of this half-size around the anchor
+	double anchorX = -0.7436, anchorY = 0.1318; //!< orbit centre / box centre (last click or bookmark)
+	std::array<double, 4> bookX {}, bookY {};
+	std::array<bool, 4> bookUsed {};
+	bool freeze = false;      //!< hold the probe where it is (readings and music keep going)
 };
+const char* probeModeName(int m);
 
 struct BarInfo
 {
@@ -97,6 +120,8 @@ struct PhrasePlan
 	float complexity = 0.5f, swing = 0.0f, novelty = 0.8f, fractalControl = 0.6f;
 	NoveltyMode noveltyMode = NoveltyMode::Recent;
 	float energy = 0.5f;           //!< 0..1 dynamic arc of the section
+	float sustain = 0.0f, syncopation = 0.0f;
+	int grid = 0;
 	uint32_t seed = 1;
 	std::array<BarInfo, MaxPhraseBars> bar {};
 	std::array<std::vector<DrumHit>, NumDrumLanes> drums;
@@ -211,6 +236,9 @@ private:
 	uint32_t m_sessionSeed;
 	// probe walk
 	double m_x = -0.7436, m_y = 0.1318, m_heading = 0.0;
+	double m_orbitPhase = 0.0;
+	int m_pathTarget = 0;
+	int m_barsSinceJump = 0;
 	Rng m_walkRng;
 	// harmony memory
 	int m_prevChord = -1;
