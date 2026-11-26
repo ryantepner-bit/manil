@@ -47,7 +47,7 @@ LMMS (unchanged core, song editor, pattern editor, piano roll, mixer, 60+ plugin
  │    Scales                 migrated from MANDELBROT/Source/Core
  │    PartGenerator          migrated + rewritten from MANDELBROT/Source/Live (per track, per tick)
  │    PhraseHistory          NEW  remembers everything played, anti-repetition, recall
- ├─ FractalEngine (core)     NEW  global probe, drift, style, key; read by every generator
+ ├─ FractalEngine (core)     NEW  global probe (6 movement modes), technical music controls, key; read by every generator
  ├─ InstrumentTrack          PATCHED  each instrument track gets a FRACTAL tab (role, density, ...)
  │                                     and generates notes live while the song plays
  ├─ FractalWindow (gui)      NEW  the set, the probe, what it is reading, history browser, capture
@@ -69,6 +69,12 @@ LMMS (unchanged core, song editor, pattern editor, piano roll, mixer, 60+ plugin
 | Granular cloud effect **Mandel Cloud** | pyo `Granulator` (granulatormodule.c) / cecilia5 granulator modules | ported to C++: same pointer/phase-offset grain scheduler and Hanning envelope, reading a 6 s live buffer instead of a table; adds per-grain chord-tone pitches from the fractal engine, scatter, width, freeze (`plugins/MandelCommon/CeciliaDsp.cpp`, `plugins/MandelCloud`) | written, DSP unit-tested offline; LMMS build pending CI |
 | Spectral effects **Mandel Spectral** | pyo `PVAnal`, `PVSynth`, `PVVerb` (phasevocmodule.c); cecilia5 spectral modules | ported to C++ with its own radix-2 FFT (no FFTW dependency): analysis, PVVerb decay/damp, freeze, blur, bin shift, resynthesis. Offline test: identity resynthesis error 1e-5 at 2048-sample latency; shift 440 to 660 Hz; freeze holds 330 Hz after input stops | written, DSP unit-tested offline; LMMS build pending CI |
 | Resonator **Mandel Resonator** | pyo `Waveguide` (delaymodule.c); cecilia5 waveguide bank | ported line by line (Lagrange fractional delay, lowpass, DC blocker, feedback = 100^(-1/(f*dur))); 6 voices per side tuned to the chord the fractal engine is playing. Offline test: 110/220/523.25/1000 Hz measured 110.00/220.00/523.26/1000.06 | written, DSP unit-tested offline; LMMS build pending CI |
+| Harmonizer **Mandel Harmonizer** | pyo `Harmonizer` (two crossfading delay-line voices); cecilia5 harmonizer modules | ported; up to 4 voices that follow the playing chord or fixed intervals. Offline: 440 Hz +7 / -12 measured 659.2 / 219.9 Hz | written, tested offline; LMMS build pending CI |
+| Frequency shifter **Mandel FreqShift** | pyo `Hilbert` + `FreqShift`; cecilia5 FreqShift | ported (12-pole allpass Hilbert pair, single-sideband shift, stereo spread). Offline: 440 Hz +100 / -140 measured 540.3 / 300.0 Hz | written, tested offline; LMMS build pending CI |
+| Phaser **Mandel Phaser** | pyo `Phaser`; cecilia5 phaser | ported (allpass chain, feedback, spread, fractal or LFO sweep) | written, tested offline (stable); LMMS build pending CI |
+| Random generators: Xnoise (12 distributions), Beater, Urn, Euclid | pyo `Xnoise`, `Beat`, `Urn`; Euclid | ported to `fractal/PyoGen.h`; usable as note sources per track (Fractal / Euclid / Beat / Random) | written, tested offline |
+| Modulation source **Mandel modulator** | new (pyo random streams + fractal readings) | new LMMS controller type: outputs a fractal reading or a pyo random stream to any knob (rate, range, curve, slew, invert) | written; LMMS build pending CI |
+| Per-step hit chance | new | 16-step chance grid + track chance + humanize per generated track, rolled when the note plays | built on CI (c9a44f1); not yet tested in the Windows app |
 | pyo `WGVerb`, `STRev` | pyo | not ported: LMMS ReverbSC already covers the plain reverb | excluded |
 | Music box instrument (modal tines) | synkopa `musicbox.rs` | ported from Rust | planned |
 | Chord voicing (nearest inversion voice leading) | synkopa `chords.rs::voice` | ported from Rust | planned |
@@ -85,7 +91,7 @@ LMMS (unchanged core, song editor, pattern editor, piano roll, mixer, 60+ plugin
     folder (E:);
   * **Linux test build**, which renders the test projects in `ci/renders/` and the MANDELBROT templates
     to MP3 and prints level statistics.
-* Logs and renders go to the `ci-logs-linux` and `ci-logs-windows` branches.
+* Logs and renders go to the `ci-logs-linux` and `ci-logs-windows` branches; the installer to `ci-installer`.
 * The pure C++ engine (`lmms/src/core/fractal`) has its own unit tests
   (`lmms/src/core/fractal/tests/engine_test.cpp`), and the ported DSP has an offline test
   (`lmms/plugins/MandelCommon/tests/dsp_test.cpp`); both are run before each push.
@@ -95,6 +101,7 @@ LMMS (unchanged core, song editor, pattern editor, piano roll, mixer, 60+ plugin
 
 | Stage | Content | Result |
 |---|---|---|
-| 0 | CI that builds unmodified LMMS for Windows + Linux | scripts written; waiting for the workflow file |
-| 1 | Fractal engine (Conductor, PartGenerator, PhraseHistory), LMMS hooks, FRACTAL tab, fractal window, templates | engine tests 43/43 (includes the chord/key the effects read), 0 exact repeats in 120 phrases; LMMS compile pending CI |
-| 2 | Native Cecilia5/pyo DSP: Mandel Cloud, Mandel Spectral, Mandel Resonator; fractal link (chord, key, bar readings published by the Conductor); used in the Ambient template | DSP tests pass offline; LMMS compile pending CI |
+| 0 | CI that builds unmodified LMMS for Windows + Linux | done: Windows installer and Linux render build both green |
+| 1 | Fractal engine (Conductor, PartGenerator, PhraseHistory), LMMS hooks, FRACTAL tab, fractal window, templates | engine tests 43/43 (includes the chord/key the effects read), 0 exact repeats in 120 phrases; built by CI at c9a44f1, Linux renders OK; not yet tested in the Windows app |
+| 2 | Native Cecilia5/pyo DSP: Mandel Cloud, Mandel Spectral, Mandel Resonator; fractal link (chord, key, bar readings published by the Conductor); used in the Ambient template | DSP tests pass offline; built by CI at c9a44f1; not yet tested in the Windows app |
+| 3 | Probe controls (edge walk / free walk / orbit / path through bookmarks / jumps / locked; steps per bar, turn, edge pull, depth, read resolution, breathing, box, freeze, 4 bookmarks); style presets replaced by sustain, syncopation, palette, grid; per-track note sources (fractal, Euclid, Beat, Random), chance grid; harmonizer, frequency shifter, phaser; Mandel modulator controller | engine tests 43/43, DSP tests pass offline; built by CI at 3190672 (Windows installer + Linux, all 6 Mandel plugins compiled, IDM / Ambient / Breakbeat test renders OK); not yet tested in the Windows app |
