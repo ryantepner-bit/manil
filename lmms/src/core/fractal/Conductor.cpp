@@ -120,35 +120,125 @@ bool Conductor::tick()
 	return false;
 }
 
+const char* probeModeName(int m)
+{
+	static const char* n[] = {"Edge walk", "Free walk", "Orbit", "Path (bookmarks)", "Jumps", "Locked"};
+	return n[clampv(m, 0, static_cast<int>(GlobalSettings::NumProbeModes) - 1)];
+}
+
 void Conductor::walk(int bars)
 {
 	const GlobalSettings& s = m_settings;
-	const double zoom = std::max(1e-6, static_cast<double>(s.zoom));
+	const double zoom = std::max(1e-9, static_cast<double>(s.zoom));
+	if (s.freeze || s.probeMode == GlobalSettings::Locked) { return; }
+	const int steps = clampv(s.stepsPerBar, 1, 8);
+	const double speed = (0.02 + std::pow(clampv(s.drift, 0.0f, 1.0f), 2.0) * 0.9) * zoom / steps;
+	const int searchIter = clampv(s.maxIter / 2, 40, 600);
 	for (int b = 0; b < bars; ++b)
 	{
-		const double speed = (0.02 + std::pow(clampv(s.drift, 0.0f, 1.0f), 2.0) * 0.9) * zoom;
-		if (s.drift <= 0.0001f) { continue; }
-		// try a few headings, prefer the boundary of the set (where the music is interesting)
-		double bestH = m_heading, bestScore = -1e9;
-		for (int k = 0; k < 6; ++k)
+		++m_barsSinceJump;
+		for (int st = 0; st < steps; ++st)
 		{
-			const double h = m_heading + (k == 0 ? 0.0 : (m_walkRng.bi() * 1.6));
-			const double nx = m_x + std::cos(h) * speed, ny = m_y + std::sin(h) * speed;
-			if (nx * nx + ny * ny > 3.6) { continue; }
-			const auto f = math::analyse(nx, ny, zoom, 160, 4);
-			const double score = f.boundary + 0.5 * f.roughness + 0.3 * f.entropy
-				- 0.6 * std::abs(f.insideFraction - 0.5) + 0.25 * m_walkRng.uni() + (k == 0 ? 0.15 : 0.0);
-			if (score > bestScore) { bestScore = score; bestH = h; }
-		}
-		m_heading = bestH + m_walkRng.bi() * 0.25;
-		m_x += std::cos(m_heading) * speed;
-		m_y += std::sin(m_heading) * speed;
-		// lost far outside: head back towards the set
-		if (m_x * m_x + m_y * m_y > 3.6 || math::pixel(m_x, m_y, 60) < 0.05f)
-		{
-			m_heading = std::atan2(0.0 - m_y, -0.5 - m_x);
-			m_x += (-0.5 - m_x) * 0.1;
-			m_y += (0.0 - m_y) * 0.1;
+			switch (s.probeMode)
+			{
+			case GlobalSettings::Orbit:
+			{
+				// circle the anchor; drift sets the angular speed
+				const double r = std::max(1e-9, static_cast<double>(s.orbitRadius) * zoom);
+				m_orbitPhase += (0.05 + clampv(s.drift, 0.0f, 1.0f) * 0.6) / steps + m_walkRng.bi() * 0.05 * s.turn;
+				const double rr = r * (1.0 + 0.25 * s.turn * m_walkRng.bi());
+				m_x = s.anchorX + std::cos(m_orbitPhase) * rr;
+				m_y = s.anchorY + std::sin(m_orbitPhase) * rr;
+				break;
+			}
+			case GlobalSettings::Path:
+			{
+				// glide from bookmark to bookmark (skips empty slots; without any it walks the edge)
+				int target = -1;
+				for (int k = 0; k < 4; ++k)
+				{
+					const int idx = (m_pathTarget + k) % 4;
+					if (s.bookUsed[static_cast<size_t>(idx)]) { target = idx; break; }
+				}
+				if (target < 0) { goto edge; }
+				m_pathTarget = target;
+				const double tx = s.bookX[static_cast<size_t>(target)], ty = s.bookY[static_cast<size_t>(target)];
+				const double dx = tx - m_x, dy = ty - m_y, dist = std::sqrt(dx * dx + dy * dy);
+				const double v = std::max(speed * 4.0, 1e-9);
+				if (dist <= v) { m_x = tx; m_y = ty; m_pathTarget = (target + 1) % 4; }
+				else
+				{
+					m_heading = std::atan2(dy, dx) + m_walkRng.bi() * 0.3 * s.turn;
+					m_x += std::cos(m_heading) * v;
+					m_y += std::sin(m_heading) * v;
+				}
+				break;
+			}
+			case GlobalSettings::Jumps:
+				if (st == 0 && m_barsSinceJump >= std::max(1, s.jumpBars))
+				{
+					// teleport to a random boundary point (inside the box if there is one)
+					m_barsSinceJump = 0;
+					for (int tries = 0; tries < 40; ++tries)
+					{
+						double nx, ny;
+						if (s.boxSize > 0.0f)
+						{
+							nx = s.anchorX + m_walkRng.bi() * s.boxSize;
+							ny = s.anchorY + m_walkRng.bi() * s.boxSize;
+						}
+						else
+						{
+							nx = -2.0 + m_walkRng.uni() * 2.6;
+							ny = m_walkRng.bi() * 1.2;
+						}
+						const float e = math::pixel(nx, ny, searchIter);
+						if (e > 0.2f && e < 1.0f) { m_x = nx; m_y = ny; break; }
+					}
+					break;
+				}
+				[[fallthrough]];
+			case GlobalSettings::FreeWalk:
+			case GlobalSettings::EdgeWalk:
+			default:
+			edge:
+			{
+				if (s.drift <= 0.0001f) { break; }
+				const bool edgeMode = s.probeMode != GlobalSettings::FreeWalk;
+				const float pull = edgeMode ? clampv(s.edgePull, 0.0f, 1.0f) : 0.0f;
+				const double spread = 0.3 + 2.5 * clampv(s.turn, 0.0f, 1.0f);
+				double bestH = m_heading, bestScore = -1e9;
+				const int tries = pull > 0.0f ? 6 : 1;
+				for (int k = 0; k < tries; ++k)
+				{
+					const double h = m_heading + (k == 0 ? 0.0 : (m_walkRng.bi() * spread));
+					const double nx = m_x + std::cos(h) * speed, ny = m_y + std::sin(h) * speed;
+					if (nx * nx + ny * ny > 3.6) { continue; }
+					const auto f = math::analyse(nx, ny, zoom, searchIter, 4);
+					const double score = pull * (f.boundary + 0.5 * f.roughness + 0.3 * f.entropy - 0.6 * std::abs(f.insideFraction - 0.5))
+						+ 0.25 * m_walkRng.uni() + (k == 0 ? 0.15 : 0.0);
+					if (score > bestScore) { bestScore = score; bestH = h; }
+				}
+				m_heading = bestH + m_walkRng.bi() * 0.5 * spread * 0.25;
+				m_x += std::cos(m_heading) * speed;
+				m_y += std::sin(m_heading) * speed;
+				// lost far outside: head back towards the set
+				if (m_x * m_x + m_y * m_y > 3.6 || math::pixel(m_x, m_y, 60) < 0.05f)
+				{
+					m_heading = std::atan2(0.0 - m_y, -0.5 - m_x);
+					m_x += (-0.5 - m_x) * 0.1;
+					m_y += (0.0 - m_y) * 0.1;
+				}
+				break;
+			}
+			}
+			// the box keeps the probe near the anchor (bounces off its walls)
+			if (s.boxSize > 0.0f && s.probeMode != GlobalSettings::Orbit)
+			{
+				const double bx = s.boxSize;
+				if (m_x < s.anchorX - bx || m_x > s.anchorX + bx) { m_x = clampv(m_x, s.anchorX - bx, s.anchorX + bx); m_heading = 3.14159265 - m_heading; }
+				if (m_y < s.anchorY - bx || m_y > s.anchorY + bx) { m_y = clampv(m_y, s.anchorY - bx, s.anchorY + bx); m_heading = -m_heading; }
+			}
 		}
 	}
 }
@@ -166,23 +256,27 @@ void Conductor::buildNextPlan()
 	auto next = std::make_unique<PhrasePlan>();
 	PhrasePlan& p = *next;
 	p.serial = m_serial++;
-	p.style = s.style;
+	// the old style presets are gone from the UI: the technical controls decide the character
+	p.sustain = clampv(s.sustain, 0.0f, 1.0f);
+	p.syncopation = clampv(s.syncopation, 0.0f, 1.0f);
+	p.grid = s.grid;
+	p.style = p.sustain >= 0.5f ? Style::Ambient : (p.syncopation >= 0.5f ? Style::Breakbeat : Style::IDM);
 	p.complexity = s.complexity;
 	p.swing = s.swing;
 	p.novelty = s.novelty;
 	p.noveltyMode = s.noveltyMode;
 	p.fractalControl = s.fractalControl;
-	const int defaultBars = s.style == Style::Ambient ? 8 : 4;
+	const int defaultBars = p.sustain >= 0.5f ? 8 : 4;
 	p.bars = clampv(s.phraseBars > 0 ? s.phraseBars : defaultBars, 1, MaxPhraseBars);
 	p.sectionPhrase = static_cast<int>(p.serial % 4);
 	p.seed = hash32(m_sessionSeed ^ hash32(static_cast<uint32_t>(p.serial) * 2654435761u));
 
 	// walk the probe through the phrase, reading the set at every bar
-	const double zoom = std::max(1e-6, static_cast<double>(s.zoom)) * (1.0 + 0.3 * std::sin(p.serial * 0.37));
+	const double zoom = std::max(1e-9, static_cast<double>(s.zoom)) * (1.0 + clampv(s.breathe, 0.0f, 1.0f) * std::sin(p.serial * 0.37));
 	for (int b = 0; b < p.bars; ++b)
 	{
 		walk(1);
-		p.bar[static_cast<size_t>(b)].feat = math::analyse(m_x, m_y, zoom, 300, 8);
+		p.bar[static_cast<size_t>(b)].feat = math::analyse(m_x, m_y, zoom, clampv(s.maxIter, 60, 2000), clampv(s.readGrid, 4, 16));
 		const int tp = trailPos.load();
 		trailX[tp % 64].store(m_x); trailY[tp % 64].store(m_y);
 		trailPos.store(tp + 1);
@@ -205,7 +299,7 @@ void Conductor::buildNextPlan()
 		{
 			static const int ambientModes[] = {scales::Lydian, scales::Major, scales::Dorian, scales::PentatonicMajor, scales::Mixolydian, scales::PentatonicMinor};
 			static const int darkModes[] = {scales::Dorian, scales::Aeolian, scales::Phrygian, scales::HarmonicMinor, scales::Lydian, scales::Mixolydian, scales::InSen, scales::PentatonicMinor};
-			const bool amb = s.style == Style::Ambient;
+			const bool amb = s.palette == 1;
 			const int n = amb ? 6 : 8;
 			const int mode = (amb ? ambientModes : darkModes)[clampv(static_cast<int>(f0.angle * n), 0, n - 1)];
 			int root = s.root;
@@ -570,7 +664,7 @@ void PartGenerator::genBass(const PhrasePlan& p, const PartSettings& ps, Rng& rn
 			const bool on = s == 0 || (euclid(bp, 16, s + 3 + rot) && rng.uni() < 0.85f);
 			if (!on) { continue; }
 			// in breakbeat the bass lands on the break's kicks
-			if (p.style == Style::Breakbeat && s != 0 && !(s == 10 || s == 7 || s == 14) && rng.uni() < 0.6f) { continue; }
+			if (p.syncopation > 0.0f && s != 0 && !(s == 10 || s == 7 || s == 14) && rng.uni() < 0.6f * p.syncopation * 2.0f) { continue; }
 			int deg = bi.chordRoot;
 			const float ang = orbitA(f, s + b * 16);
 			const float r = rng.uni();
@@ -824,7 +918,7 @@ void PartGenerator::genArp(const PhrasePlan& p, const PartSettings& ps, Rng& rng
 	const bool ambient = p.style == Style::Ambient;
 	const Features& f0 = p.feat();
 	// rate: 16ths; odd periods give triplets (the set decides)
-	const bool triplets = !ambient && f0.period >= 3 && (f0.period % 2) == 1 && p.fractalControl > 0.3f;
+	const bool triplets = p.grid == 2 || (p.grid == 0 && !ambient && f0.period >= 3 && (f0.period % 2) == 1 && p.fractalControl > 0.3f);
 	const int stepTicks = ambient ? 24 : (triplets ? 16 : TicksPer16th);
 	const int total = p.bars * TicksPerBar;
 	for (int t = 0, k = 0; t < total; t += stepTicks, ++k)
