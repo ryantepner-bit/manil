@@ -9,7 +9,9 @@
 #ifndef LMMS_FRACTAL_GENERATOR_H
 #define LMMS_FRACTAL_GENERATOR_H
 
+#include <array>
 #include <atomic>
+#include <memory>
 #include <mutex>
 #include <vector>
 
@@ -19,6 +21,7 @@
 #include "LmmsTypes.h"
 #include "Model.h"
 #include "fractal/Conductor.h"
+#include "fractal/PyoGen.h"
 #include "lmms_export.h"
 
 namespace lmms
@@ -69,8 +72,34 @@ public:
 	FloatModel m_velocityModel;
 	FloatModel m_gateModel;
 
+	// ---- where the notes come from
+	enum Source { SourceFractal = 0, SourceEuclid, SourceBeat, SourceRandom, NumSources };
+	ComboBoxModel m_sourceModel;
+	FloatModel m_steerModel;      //!< how much the fractal steers the Euclid / Beat / Random sources
+	IntModel m_euHitsModel, m_euStepsModel, m_euRotateModel;
+	IntModel m_beatTapsModel;
+	FloatModel m_w1Model, m_w2Model, m_w3Model;
+	ComboBoxModel m_distModel, m_rateModel;
+	FloatModel m_x1Model, m_x2Model;
+	IntModel m_rangeModel;        //!< Random source: spread in scale degrees
+	// ---- what gets through
+	static constexpr int ChanceSteps = 16;
+	FloatModel* chanceModel(int step) { return m_chance[static_cast<size_t>(step & 15)].get(); }
+	FloatModel m_trackChanceModel; //!< % chance for every note of this track
+	FloatModel m_humanizeModel;    //!< random velocity spread
+	IntModel m_lowKeyModel, m_highKeyModel; //!< note range (MIDI); notes outside fold by octaves
+
 private:
 	fractal::PartSettings settings() const;
+	void buildAlternative(const fractal::PhrasePlan& plan, const fractal::PartSettings& ps);
+	const std::vector<fractal::GenNote>& activeNotes() const;
+
+	std::array<std::unique_ptr<FloatModel>, ChanceSteps> m_chance;
+	std::vector<fractal::GenNote> m_altNotes;
+	uint64_t m_altBuiltFor = UINT64_MAX;
+	fractal::pyo::Random m_rng;
+	fractal::pyo::Xnoise m_xnoise;
+	fractal::pyo::Urn m_urn;
 
 	InstrumentTrack* m_track;
 	fractal::PartGenerator m_gen;
